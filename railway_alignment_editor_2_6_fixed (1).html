@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>線形エディター</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;background:#f2f1ed;color:#1a1a18}
+body.dark{background:#12151b;color:#cac8c0}
+@media(max-width:639px){html,body{overflow:auto;height:auto}}
+#app{display:flex;flex-direction:column;height:100%;max-width:1600px;margin:0 auto;padding:6px;gap:5px;overflow:hidden}
+@media(max-width:639px){#app{height:auto;overflow:visible}}
+#tb{flex-shrink:0;display:flex;align-items:center;gap:4px;height:34px;flex-wrap:nowrap;overflow:hidden}
+.ttl{font-size:14px;font-weight:700;color:#3a3a38;white-space:nowrap;margin-right:2px}
+body.dark .ttl{color:#a8a6a0}
+button{font-size:11px;font-weight:500;padding:4px 9px;border-radius:6px;border:0.5px solid #bbb;background:#fff;color:#333;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;white-space:nowrap;line-height:1.3}
+button:active{opacity:.6}
+body.dark button{background:#1d2128;border-color:#3c3a38;color:#b8b6ae}
+.ml{margin-left:auto}
+.badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.badge.ok{background:#d0edda;color:#165830}
+.badge.ng{background:#fce8e8;color:#9a1e1e}
+body.dark .badge.ok{background:#18302a;color:#50c87a}
+body.dark .badge.ng{background:#381818;color:#e06868}
+#ws{flex:1;min-height:0;display:flex;gap:5px;overflow:hidden}
+@media(max-width:639px){#ws{flex-direction:column;overflow:visible;min-height:unset}}
+#lp{width:330px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+@media(max-width:639px){#lp{width:100%;min-height:unset}}
+#tabs{flex-shrink:0;display:flex;align-items:flex-end;height:32px;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#bbb transparent;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+#tabs::-webkit-scrollbar{height:4px;background:transparent}
+#tabs::-webkit-scrollbar-thumb{background:#bbb;border-radius:2px}
+body.dark #tabs::-webkit-scrollbar-thumb{background:#555}
+#tabs::-webkit-scrollbar-track{background:transparent}
+.tab{display:flex;align-items:center;gap:3px;padding:0 7px;height:26px;border:0.5px solid #ccc;border-bottom:none;border-radius:4px 4px 0 0;background:#e4e2de;font-size:11px;cursor:pointer;flex-shrink:0;color:#666}
+.tab.active{background:#fff;font-weight:600;color:#1a1a18;border-color:#bbb}
+body.dark .tab{background:#1a1e24;border-color:#383836;color:#777}
+body.dark .tab.active{background:#20252e;color:#cac8c0;border-color:#484644}
+.tdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.tx{font-size:10px;opacity:.3;padding:0 1px;cursor:pointer}.tx:hover{opacity:.9}
+.tadd{height:26px;padding:0 10px;font-size:13px;background:transparent;border:0.5px dashed #bbb;border-bottom:none;border-radius:4px 4px 0 0;color:#999;cursor:pointer}
+body.dark .tadd{border-color:#444;color:#555}
+.tborder{flex:1;border-bottom:0.5px solid #bbb;min-width:4px;flex-shrink:1}
+body.dark .tborder{border-color:#383836}
+#lenbar{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:2px 8px;font-size:10px;color:#888;background:#faf9f5;border-left:0.5px solid #bbb;border-right:0.5px solid #bbb;font-family:'Menlo',monospace}
+body.dark #lenbar{background:#16191f;border-color:#383836;color:#666}
+.lbval{font-weight:600;color:#555}
+body.dark .lbval{color:#888}
+.lbdiff{font-size:9px;padding:1px 4px;border-radius:3px;margin-left:3px}
+.lbdiff.warn{background:#ffedb5;color:#9a6000}
+.lbdiff.ok2{background:#d0edda;color:#165830}
+body.dark .lbdiff.warn{background:#3a2800;color:#e0a030}
+body.dark .lbdiff.ok2{background:#183028;color:#50c870}
+#ta{flex:1;min-height:60px;font-family:'Menlo','Courier New',monospace;font-size:11px;line-height:1.5;resize:none;border:0.5px solid #bbb;border-top:none;border-radius:0;padding:7px 8px;background:#fff;color:#1a1a18;tab-size:2;outline:none;-webkit-appearance:none;overflow:auto}
+body.dark #ta{background:#191d24;color:#c8c4bc;border-color:#383836}
+@media(max-width:639px){#ta{height:240px;flex:none}}
+#oc{flex-shrink:0;padding:6px 8px;border:0.5px solid #bbb;border-top:0.5px solid #e0ded8;border-radius:0 0 6px 6px;background:#eeecea;display:flex;flex-direction:column;gap:5px}
+body.dark #oc{background:#161a20;border-color:#383836;border-top-color:#2a2a28}
+.or{display:flex;align-items:center;gap:5px;flex-wrap:nowrap}
+.or label{font-size:10px;color:#888;white-space:nowrap;flex-shrink:0}
+.on{font-size:11px;padding:2px 5px;border:0.5px solid #ccc;border-radius:4px;background:#fff;color:#1a1a18;font-family:'Menlo',monospace;outline:none;-moz-appearance:textfield}
+.on::-webkit-outer-spin-button,.on::-webkit-inner-spin-button{-webkit-appearance:none}
+.on.w80{width:80px}.on.w60{width:60px}.on.w70{width:70px}.on.wfull{flex:1;width:0}
+body.dark .on{background:#11141a;color:#c8c4bc;border-color:#3a3a38}
+.oc-lbl{display:flex;align-items:center;gap:3px;font-size:10px;color:#777;cursor:pointer;flex-shrink:0}
+body.dark .oc-lbl{color:#888}
+.osb{font-size:10px;padding:3px 7px}
+select.connsel{flex:1;font-size:11px;padding:2px 4px;border:0.5px solid #ccc;border-radius:4px;background:#fff;color:#1a1a18;outline:none;min-width:0}
+body.dark select.connsel{background:#11141a;color:#c8c4bc;border-color:#3a3a38}
+#rp{flex:1;min-width:0;position:relative;overflow:hidden}
+#pc{display:block;position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;-webkit-user-select:none;user-select:none;border:0.5px solid #ccc;border-radius:6px}
+#pc:active{cursor:grabbing}
+body.dark #pc{border-color:#383836}
+@media(max-width:639px){#rp{height:80vw;flex:none}}
+#zbtns{position:absolute;top:6px;right:6px;display:flex;flex-direction:column;gap:3px;z-index:2}
+#zbtns button{font-size:14px;padding:3px 9px;background:rgba(255,255,255,.88);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border-color:rgba(0,0,0,.12)}
+body.dark #zbtns button{background:rgba(14,18,24,.88);color:#b8b6ae;border-color:rgba(255,255,255,.1)}
+#zl{position:absolute;bottom:6px;left:8px;font-size:9px;font-family:'Menlo',monospace;color:#888;pointer-events:none;background:rgba(255,255,255,.75);padding:1px 5px;border-radius:3px;line-height:1.7}
+body.dark #zl{background:rgba(0,0,0,.4);color:#666}
+.sec{flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+.sec-hd{flex-shrink:0;display:flex;align-items:center;gap:5px;height:26px;padding:0 7px;border:0.5px solid #ccc;border-radius:6px 6px 0 0;background:#e8e6e2;cursor:pointer;-webkit-user-select:none;user-select:none;overflow:hidden}
+body.dark .sec-hd{background:#1c2028;border-color:#383838}
+.sec-hd .st{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#888;white-space:nowrap}
+.sec-hd .slen{font-size:10px;font-family:'Menlo',monospace;color:#9a9890;margin-left:2px;white-space:nowrap}
+body.dark .sec-hd .slen{color:#585654}
+.sec-tog{flex-shrink:0;font-size:10px;color:#aaa;transition:transform .15s;display:inline-block}
+.sec.col .sec-tog{transform:rotate(-90deg)}
+.sec-bd{flex:1;min-height:0;overflow:hidden;border:0.5px solid #ccc;border-top:none;border-radius:0 0 6px 6px}
+body.dark .sec-bd{border-color:#383838}
+#pf{height:130px}
+#pf.col{height:26px}
+#co{height:105px}
+#co.col{height:26px}
+@media(max-width:639px){#pf{height:120px}#co{height:95px}}
+.ppm-ctrl{display:flex;align-items:center;gap:3px;cursor:default}
+.ppm-ctrl label{font-size:9px;color:#aaa;white-space:nowrap}
+.ppm-ctrl input[type=range]{width:64px;height:14px;cursor:pointer;-webkit-appearance:none;appearance:none;background:rgba(0,0,0,.15);border-radius:7px;outline:none}
+body.dark .ppm-ctrl input[type=range]{background:rgba(255,255,255,.12)}
+.ppm-ctrl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#666;cursor:pointer}
+.ppm-lbl{font-size:9px;color:#aaa;min-width:26px;font-family:'Menlo',monospace}
+.pscroll{width:100%;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;background:#fff}
+body.dark .pscroll{background:#191d24}
+.cbox{width:100%;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#0d1015;padding:5px 8px;font-family:'Menlo','Courier New',monospace;font-size:10.5px;line-height:1.65}
+body.dark .cbox{background:#07080c}
+.ll{display:flex;gap:6px;padding:.5px 0;border-bottom:.5px solid rgba(255,255,255,.03)}
+.ll:last-child{border-bottom:none}
+.lt{color:#444;min-width:66px;flex-shrink:0;font-size:10px}
+.lm{flex:1;word-break:break-all;white-space:pre-wrap}
+.ok .lm{color:#4ec97e}.er .lm{color:#ff5c5c}.in .lm{color:#60b4ff}.wa .lm{color:#f0c060}.gr .lm{color:#484848}
+body.dark .gr .lm{color:#383838}
+.ov{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
+.ov.on{display:flex}
+.ovb{background:#fff;border-radius:10px;padding:14px 16px;width:min(430px,96vw);display:flex;flex-direction:column;gap:9px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+body.dark .ovb{background:#1c2028;color:#cac8c0}
+.ovb h3{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.mr{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.mr label{font-size:11px;color:#666;white-space:nowrap}
+body.dark .mr label{color:#888}
+.mr input[type=number],.mr input[type=text]{font-size:11px;padding:3px 6px;border:0.5px solid #ccc;border-radius:4px;background:#fff;color:#1a1a18;font-family:'Menlo',monospace;outline:none}
+.mr input[type=number]{width:118px}
+.mr input[type=text]{flex:1;min-width:160px}
+body.dark .mr input{background:#11141a;color:#c8c4bc;border-color:#3c3c3a}
+.mr input[type=range]{flex:1;min-width:80px}
+.mhint{font-size:10px;color:#888;line-height:1.5}
+.io-group{display:flex;flex-direction:column;gap:6px}
+.io-gt{font-size:11px;font-weight:700;color:#555;padding-bottom:3px;border-bottom:0.5px solid #e0ded8}
+body.dark .io-gt{color:#888;border-color:#383836}
+.io-row{display:flex;align-items:center;gap:8px}
+.io-row button{min-width:130px;text-align:left}
+.io-desc{font-size:10px;color:#999}
+body.dark .io-desc{color:#666}
+/* docked map panel */
+#mappanel{position:absolute;bottom:8px;right:8px;width:300px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:0.5px solid rgba(0,0,0,.18);border-radius:8px;padding:7px 9px;display:none;flex-direction:column;gap:4px;z-index:6;font-size:11px;box-shadow:0 4px 18px rgba(0,0,0,.16);max-height:calc(100% - 16px);overflow-y:auto}
+#mappanel.on{display:flex}
+body.dark #mappanel{background:rgba(20,24,32,.95);border-color:rgba(255,255,255,.12);color:#cac8c0}
+#mappanel .mphd{display:flex;align-items:center;gap:4px;font-weight:600;font-size:11px;border-bottom:.5px solid rgba(0,0,0,.08);padding-bottom:3px;margin-bottom:1px}
+body.dark #mappanel .mphd{border-color:rgba(255,255,255,.08)}
+#mappanel .mpr{display:flex;align-items:center;gap:5px;flex-wrap:nowrap}
+#mappanel .mpr label{font-size:10px;color:#888;flex-shrink:0;min-width:42px}
+body.dark #mappanel .mpr label{color:#9a9890}
+#mappanel input[type=number],#mappanel input[type=text]{font-size:10px;padding:2px 5px;border:.5px solid #ccc;border-radius:3px;background:#fff;color:#1a1a18;font-family:'Menlo',monospace;outline:none;flex:1;min-width:0;width:0}
+body.dark #mappanel input[type=number],body.dark #mappanel input[type=text]{background:#11141a;color:#c8c4bc;border-color:#3c3c3a}
+#mappanel input[type=range]{flex:1;min-width:60px}
+#mappanel .mphint{font-size:9px;color:#888;line-height:1.4}
+#mappanel .mpclose{margin-left:auto;font-size:11px;padding:1px 8px;background:transparent;border:.5px solid rgba(0,0,0,.18)}
+body.dark #mappanel .mpclose{border-color:rgba(255,255,255,.18);color:#cac8c0}
+@media(max-width:639px){#mappanel{width:calc(100% - 16px)}}
+/* max cant row */
+.cant-row{display:flex;align-items:center;gap:5px;flex-wrap:nowrap}
+.cant-hint{font-size:9px;color:#888;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.dark .cant-hint{color:#888}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="tb">
+  <span class="ttl">🛤 線形エディター</span>
+  <button onclick="fitView()">⊡ 全体</button>
+  <button onclick="reverseTrack()" title="線形を前後反転">⇄ 反転</button>
+  <button onclick="openParallel()" title="並列線形を作成">⇉ 並列</button>
+  <button onclick="openConnSuggest()" title="端点間の接続線形を提案">🔗 接続提案</button>
+  <button onclick="openMap()">🗺 地図</button>
+  <button onclick="openIO()">📁 入出力</button>
+  <span id="badge" class="badge ok" style="opacity:0">—</span>
+  <button class="ml" onclick="toggleDark()">🌙</button>
+</div>
+<div id="ws">
+  <div id="lp">
+    <div id="tabs"></div>
+    <div id="lenbar">
+      <span>平面: <span class="lbval" id="lba">—</span></span>
+      <span>縦断: <span class="lbval" id="lbp">—</span><span id="lbdiff" class="lbdiff" style="display:none"></span></span>
+    </div>
+    <textarea id="ta" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>
+    <div id="oc">
+      <div class="or">
+        <label>名前</label>
+        <input type="text" id="tname" class="on wfull" placeholder="線形名" oninput="onNameChg()">
+      </div>
+      <div class="or">
+        <label>X(m)</label><input class="on w80" type="number" id="ox" value="0" step="1" oninput="onOC()">
+        <label>Y(m)</label><input class="on w80" type="number" id="oy" value="0" step="1" oninput="onOC()">
+        <label class="oc-lbl"><input type="checkbox" id="oen" checked onchange="onOC()">表示</label>
+      </div>
+      <div class="or">
+        <label>方位(°)</label><input class="on w60" type="number" id="obr" value="90" step="0.5" oninput="onOC()">
+        <span class="mhint" style="font-size:9px;flex-shrink:0">北=0 東=90</span>
+        <button class="osb ml" onclick="resetOC()">↺ リセット</button>
+      </div>
+      <div class="or cant-row">
+        <label>最大カント角(°)</label>
+        <input class="on w60" type="number" id="ocant" value="5.5" step="0.1" min="0" max="15" oninput="onCantChg()">
+        <button class="osb" onclick="suggestCant()" title="最小半径から推奨値を提案">推奨</button>
+        <span id="canthint" class="cant-hint">—</span>
+      </div>
+      <div class="or platform-row">
+        <label class="oc-lbl"><input type="checkbox" id="oleveldoors" onchange="onPlatformChg()">客用扉高さ平準化(線形全体)</label>
+      </div>
+      <div class="or platform-row">
+        <label>ホーム側</label>
+        <select id="opfside" class="on" style="flex:0 0 64px;width:64px" onchange="onPlatformChg()">
+          <option value="R">右(R)</option>
+          <option value="L">左(L)</option>
+        </select>
+        <label>車体幅(mm)</label>
+        <input class="on w70" type="number" id="opfcarw" value="2900" step="10" oninput="onPlatformChg()">
+      </div>
+      <div class="or">
+        <label style="flex-shrink:0">接続先</label>
+        <select id="conndst" class="connsel"></select>
+        <button class="osb" onclick="connectTo()">接続</button>
+      </div>
+    </div>
+  </div>
+  <div id="rp">
+    <canvas id="pc"></canvas>
+    <div id="zbtns">
+      <button onclick="zoomBtn(1.4)">＋</button>
+      <button onclick="zoomBtn(1/1.4)">－</button>
+    </div>
+    <span id="zl"></span>
+    <div id="mappanel">
+      <div class="mphd">🗺 地図設定<button class="mpclose" onclick="closeMapPanel()">✕</button></div>
+      <div class="mpr"><label>地図表示</label><input type="checkbox" id="mon" onchange="onMT()"><span id="tst" style="font-size:9px;color:#888;flex:1;text-align:right"></span></div>
+      <div class="mpr"><label>緯度</label><input type="number" id="mlat" value="35.681236" step="0.000001" onchange="onMC()"></div>
+      <div class="mpr"><label>経度</label><input type="number" id="mlon" value="139.767125" step="0.000001" onchange="onMC()"></div>
+      <div class="mpr"><label>方位°</label><input type="number" id="mbear" value="90" step="1" onchange="onMC()"><span class="mphint" style="flex-shrink:0">北0/東90</span></div>
+      <div class="mpr"><label>透明度</label><input type="range" id="mopa" min="10" max="100" value="65" oninput="onMOpa(this.value)"><span id="mopal" style="font-size:10px;min-width:28px;text-align:right">65%</span></div>
+      <div class="mpr"><label>GSI URL</label><input type="text" id="gsiurl" placeholder="https://maps.gsi.go.jp/#16/..." oninput="parseGsi(this.value)"></div>
+      <div class="mphint">maps.gsi.go.jp の URL をコピー&貼付で自動入力</div>
+    </div>
+  </div>
+</div>
+<div id="pf" class="sec">
+  <div class="sec-hd" onclick="toggleSec('pf')">
+    <span class="st">縦断線形</span>
+    <span class="slen" id="pfslen"></span>
+    <div class="ppm-ctrl" onclick="event.stopPropagation()">
+      <label>接続表示</label>
+      <input type="checkbox" id="profchain" onchange="renderProfile()" title="接続された線形を一続きで表示">
+    </div>
+    <div class="ppm-ctrl" onclick="event.stopPropagation()">
+      <label>圧縮</label>
+      <input type="range" id="ppmsl" min="1" max="30" value="5"
+        oninput="event.stopPropagation();onPPM(this.value)"
+        onmousedown="event.stopPropagation()"
+        ontouchstart="event.stopPropagation()">
+      <span class="ppm-lbl" id="ppmlbl">5px/m</span>
+    </div>
+    <span class="sec-tog ml">▼</span>
+  </div>
+  <div class="sec-bd pscroll"><canvas id="rc" height="103" style="display:block"></canvas></div>
+</div>
+<div id="co" class="sec">
+  <div class="sec-hd" onclick="toggleSec('co')">
+    <span class="st">デバッグ</span>
+    <button onclick="event.stopPropagation();clearLog()" style="font-size:10px;padding:2px 7px;margin-left:4px">クリア</button>
+    <span class="sec-tog ml">▼</span>
+  </div>
+  <div class="sec-bd cbox" id="logbox"></div>
+</div>
+</div>
+
+<!-- 地図モーダルは廃止: 平面線形右下のドッキングパネル(#mappanel)に変更 -->
+
+<div id="iopo" class="ov" onclick="if(event.target===this)openIO()">
+<div class="ovb">
+  <h3>📁 入出力<button style="margin-left:auto;font-size:11px;padding:3px 10px" onclick="openIO()">✕ 閉じる</button></h3>
+  <div class="io-group">
+    <div class="io-gt">出力 (Export)</div>
+    <div class="io-row"><button onclick="expAll()">📦 まとめて出力</button><span class="io-desc">全線形を1ファイルに結合</span></div>
+    <div class="io-row"><button onclick="expAllModule()">🧩 まとめて出力（ModuleScript形式）</button><span class="io-desc">Robloxプラグインのまとめて敷設用 .lua</span></div>
+    <div class="io-row"><button onclick="expCurrent()">📄 現在の線形を出力</button><span class="io-desc">現在選択中の線形を個別出力</span></div>
+    <div class="io-row"><button onclick="expAllIndividual()">📑 個別に一括出力</button><span class="io-desc">全線形を各々個別ファイルで出力</span></div>
+  </div>
+  <div class="io-group">
+    <div class="io-gt">入力 (Import)</div>
+    <div class="io-row"><button onclick="trigImp('multi')">📂 ファイルを開く（新規タブ）</button><span class="io-desc">新規タブとして追加</span></div>
+    <div class="io-row"><button onclick="trigImp('overwrite')">📝 現在タブへ上書き</button><span class="io-desc">現在のタブに上書き</span></div>
+    <div class="io-row"><button onclick="trigImp('combined')">📦 まとめてインポート</button><span class="io-desc">まとめて出力ファイルから復元</span></div>
+  </div>
+  <div class="mhint">対応形式: .lua / .txt<br>「まとめて出力」ファイルは線形エディターの独自形式です。</div>
+</div>
+</div>
+
+<input type="file" id="fi1" multiple accept=".lua,.txt" style="display:none" onchange="importFiles(this.files,true);this.value=''">
+<input type="file" id="fi2" accept=".lua,.txt" style="display:none" onchange="importFiles(this.files,false);this.value=''">
+<input type="file" id="fi3" accept=".lua,.txt" style="display:none" onchange="importCombined(this.files);this.value=''">
+
+<!-- 並列線形モーダル -->
+<div id="parallelpo" class="ov" onclick="if(event.target===this)openParallel()">
+<div class="ovb">
+  <h3>⇉ 並列線形を作成<button style="margin-left:auto;font-size:11px;padding:3px 10px" onclick="openParallel()">✕</button></h3>
+  <div class="mr">
+    <label>オフセット距離(m)</label>
+    <input type="number" id="paroff" value="5" step="0.5" min="0.1" style="width:100px">
+  </div>
+  <div class="mr">
+    <label>方向</label>
+    <label><input type="radio" name="pardir" value="left" checked> 左</label>
+    <label><input type="radio" name="pardir" value="right"> 右</label>
+    <label><input type="radio" name="pardir" value="both"> 両側</label>
+  </div>
+  <div class="mr">
+    <label>名前サフィックス</label>
+    <input type="text" id="parsuf" value="-並列" style="width:120px">
+  </div>
+  <div class="mhint">現在の線形を指定した距離だけ横にずらした並列線形を新規タブとして追加します。</div>
+  <div style="display:flex;gap:8px;margin-top:4px">
+    <button onclick="execParallel()" style="flex:1;padding:6px">作成</button>
+    <button onclick="openParallel()" style="padding:6px 14px">キャンセル</button>
+  </div>
+</div>
+</div>
+
+<!-- 接続提案モーダル -->
+<div id="connsuggpo" class="ov" onclick="if(event.target===this)openConnSuggest()">
+<div class="ovb" style="min-width:min(520px,96vw)">
+  <h3>🔗 接続線形の提案<button style="margin-left:auto;font-size:11px;padding:3px 10px" onclick="openConnSuggest()">✕</button></h3>
+  <div class="mr" style="gap:10px">
+    <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+      <label style="font-size:10px;font-weight:600">始点側の端点</label>
+      <select id="csFrom" class="connsel" style="flex:none" onchange="updateConnPreview()">
+        <option value="">— 選択 —</option>
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+      <label style="font-size:10px;font-weight:600">終点側の端点</label>
+      <select id="csTo" class="connsel" style="flex:none" onchange="updateConnPreview()">
+        <option value="">— 選択 —</option>
+      </select>
+    </div>
+  </div>
+  <div class="mr" style="margin-top:4px">
+    <label>最小半径(m)</label>
+    <input type="number" id="csMinR" value="150" step="10" min="10" style="width:90px">
+    <label>緩和長(m)</label>
+    <input type="number" id="csKanwa" value="50" step="5" min="0" style="width:80px">
+    <button onclick="updateConnPreview()" style="margin-left:4px">計算</button>
+  </div>
+  <div id="csResult" style="font-size:11px;font-family:'Menlo',monospace;background:rgba(0,0,0,.05);border-radius:5px;padding:7px 10px;min-height:40px;line-height:1.7;margin-top:2px;max-height:180px;overflow-y:auto;white-space:pre-wrap"></div>
+  <div style="display:flex;gap:8px;margin-top:6px">
+    <button id="csApplyBtn" onclick="applyConnSuggest()" style="flex:1;padding:6px" disabled>新規タブとして追加</button>
+    <button onclick="openConnSuggest()" style="padding:6px 14px">閉じる</button>
+  </div>
+</div>
+</div>
+
+<script>
+(()=>{
+'use strict';
+var LL=[];
+function p2(n){return String(n).padStart(2,'0');}
+function p3(n){return String(n).padStart(3,'0');}
+function ts(){var n=new Date();return p2(n.getHours())+':'+p2(n.getMinutes())+':'+p2(n.getSeconds())+'.'+p3(n.getMilliseconds());}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function push(type,msg){
+  LL.push({t:ts(),type:type,msg:String(msg)});
+  if(LL.length>500)LL=LL.slice(-500);
+  var b=document.getElementById('logbox');if(!b)return;
+  var bot=b.scrollHeight-b.scrollTop-b.clientHeight<40;
+  b.innerHTML=LL.map(function(l){return'<div class="ll '+l.type+'"><span class="lt">'+l.t+'</span><span class="lm">'+esc(l.msg)+'</span></div>';}).join('');
+  if(bot)b.scrollTop=b.scrollHeight;
+}
+function log(m){push('gr',m);}
+function logOk(m){push('ok','\u2713 '+m);}
+function logErr(m){push('er','\u2717 '+m);}
+function logInfo(m){push('in','\u2192 '+m);}
+function logWarn(m){push('wa','! '+m);}
+window.clearLog=function(){LL=[];push('gr','\u30af\u30ea\u30a2');};
+
+function dark(){return document.body.classList.contains('dark');}
+window.toggleDark=function(){document.body.classList.toggle('dark');scheduleRender();renderProfile();};
+var GA=137.508;
+function colTrack(ti){
+  var h=(ti*GA)%360|0,s=55+ti%3*8,l=dark()?55+ti%2*8:42+ti%2*8;
+  return'hsl('+h+','+s+'%,'+l+'%)';
+}
+function colSeg(ti,si){
+  var h=(ti*GA)%360|0,s=55+ti%3*8,base=dark()?55+ti%2*8:42+ti%2*8;
+  var l=si%2===0?base:(dark()?Math.min(82,base+18):Math.max(18,base-18));
+  return'hsl('+h+','+s+'%,'+l+'%)';
+}
+
+function badge(ok,msg){var b=document.getElementById('badge');b.style.opacity='1';b.className='badge '+(ok?'ok':'ng');b.textContent=msg;}
+window.toggleSec=function(id){document.getElementById(id).classList.toggle('col');};
+
+var PPM=5;
+window.onPPM=function(v){PPM=+v;document.getElementById('ppmlbl').textContent=v+'px/m';renderProfile();};
+
+var V={scale:1,tx:0,ty:0};
+function w2c(wx,wy){return{cx:V.tx+wx*V.scale,cy:V.ty-wy*V.scale};}
+function c2w(cx,cy){return{wx:(cx-V.tx)/V.scale,wy:(V.ty-cy)/V.scale};}
+function zoomAt(cx,cy,r){
+  var ns=Math.max(0.001,Math.min(20000,V.scale*r)),f=ns/V.scale;
+  V.tx=cx+(V.tx-cx)*f;V.ty=cy+(V.ty-cy)*f;V.scale=ns;
+  updateZl();scheduleRender();
+}
+window.zoomBtn=function(r){var cv=document.getElementById('pc');zoomAt(cv.width/2,cv.height/2,r);};
+function updateZl(){
+  var el=document.getElementById('zl');if(!el)return;
+  var sc=V.scale,s=sc>=1?'1px\u2248'+(1/sc).toFixed(2)+'m':'1m='+sc.toFixed(3)+'px';
+  var cL=Math.cos(mapSt.lat*Math.PI/180),z=Math.min(18,Math.max(0,Math.round(Math.log2(Math.max(1,sc*40075016*cL/256)))));
+  el.textContent=s+'  z'+z;
+}
+
+function l2w(lx,ly,tr){
+  var th=(90-(tr.offsetBear||90))*Math.PI/180,c=Math.cos(th),s=Math.sin(th);
+  return{wx:(tr.offsetX||0)+lx*c-ly*s,wy:(tr.offsetY||0)+lx*s+ly*c};
+}
+
+window.fitView=function(){
+  var cv=document.getElementById('pc'),W=cv.width,H=cv.height;if(!W||!H)return;
+  var x0=1e9,x1=-1e9,y0=1e9,y1=-1e9,any=false;
+  for(var ti=0;ti<tracks.length;ti++){
+    var tr=tracks[ti];if(!tr.enabled||!tr.geo||!tr.geo.segs||!tr.geo.segs.length)continue;
+    for(var si=0;si<tr.geo.segs.length;si++){
+      var pts=tr.geo.segs[si].pts;if(!pts||!pts.length)continue;
+      for(var pi=0;pi<pts.length;pi++){
+        try{var w=l2w(pts[pi].x,pts[pi].y,tr);x0=Math.min(x0,w.wx);x1=Math.max(x1,w.wx);y0=Math.min(y0,w.wy);y1=Math.max(y1,w.wy);any=true;}catch(e2){}
+      }
+    }
+  }
+  if(!any){log('\u8868\u793a\u3067\u304d\u308b\u7dda\u5f62\u304c\u3042\u308a\u307e\u305b\u3093');return;}
+  var M=70,rx=Math.max(x1-x0,1),ry=Math.max(y1-y0,1);
+  V.scale=Math.min((W-M*2)/rx,(H-M*2)/ry);
+  if(!isFinite(V.scale)||V.scale<=0)V.scale=1;
+  V.tx=W/2-((x0+x1)/2)*V.scale;V.ty=H/2+((y0+y1)/2)*V.scale;
+  updateZl();scheduleRender();
+  logOk('\u5168\u4f53\u8868\u793a scale='+V.scale.toFixed(3)+'px/m');
+};
+
+var mapSt={enabled:false,lat:35.681236,lon:139.767125,bearing:90,opacity:0.65};
+window.openMap=function(){document.getElementById('mappanel').classList.toggle('on');};
+window.closeMapPanel=function(){document.getElementById('mappanel').classList.remove('on');};
+window.onMT=function(){mapSt.enabled=document.getElementById('mon').checked;tileCache.clear();scheduleRender();};
+window.onMC=function(){mapSt.lat=+document.getElementById('mlat').value;mapSt.lon=+document.getElementById('mlon').value;mapSt.bearing=+document.getElementById('mbear').value;tileCache.clear();updateZl();scheduleRender();};
+window.onMOpa=function(v){mapSt.opacity=v/100;document.getElementById('mopal').textContent=v+'%';scheduleRender();};
+window.parseGsi=function(url){
+  var m=url.match(/#(\d+)\/([\d.]+)\/([\d.]+)/);if(!m)return;
+  var lat=+m[2],lon=+m[3];
+  document.getElementById('mlat').value=lat.toFixed(6);document.getElementById('mlon').value=lon.toFixed(6);
+  mapSt.lat=lat;mapSt.lon=lon;tileCache.clear();scheduleRender();
+  logOk('GSI URL: lat='+lat+' lon='+lon);
+};
+window.openIO=function(){document.getElementById('iopo').classList.toggle('on');};
+window.trigImp=function(mode){document.getElementById(mode==='overwrite'?'fi2':mode==='combined'?'fi3':'fi1').click();};
+
+var tileCache=new Map();
+function getTile(z,tx,ty){
+  var key=z+'/'+tx+'/'+ty;if(tileCache.has(key))return tileCache.get(key);
+  var e={loaded:false,err:false,img:null},img=new Image();
+  img.onload=function(){e.loaded=true;e.img=img;scheduleRender();};
+  img.onerror=function(){e.err=true;};
+  img.src='https://cyberjapandata.gsi.go.jp/xyz/std/'+z+'/'+tx+'/'+ty+'.png';
+  e.img=img;tileCache.set(key,e);return e;
+}
+function latLon2px(lat,lon,z){
+  var n=1<<z,lr=lat*Math.PI/180;
+  return{px:(lon+180)/360*n*256,py:(1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n*256};
+}
+function drawTiles(ctx,W,H){
+  if(!mapSt.enabled)return;
+  var b=mapSt.bearing*Math.PI/180,cL=Math.cos(mapSt.lat*Math.PI/180);
+  var nf=V.scale*40075016*cL/256;
+  var z=Math.max(2,Math.min(18,Math.round(Math.log2(Math.max(1,nf)))));
+  var n=1<<z,op=latLon2px(mapSt.lat,mapSt.lon,z),mpp=40075016*cL/(n*256);
+  function tp2c(tpx,tpy){
+    var dpx=tpx-op.px,dpy=tpy-op.py,em=dpx*mpp,nm=-dpy*mpp;
+    var wx=em*Math.sin(b)+nm*Math.cos(b),wy=nm*Math.sin(b)-em*Math.cos(b);
+    return[V.tx+wx*V.scale,V.ty-wy*V.scale];
+  }
+  var txMin=Infinity,txMax=-Infinity,tyMin=Infinity,tyMax=-Infinity;
+  var corners=[[0,0],[W,0],[W,H],[0,H]];
+  for(var ci=0;ci<corners.length;ci++){
+    var cxy=c2w(corners[ci][0],corners[ci][1]);
+    var em2=cxy.wx*Math.sin(b)-cxy.wy*Math.cos(b),nm2=cxy.wx*Math.cos(b)+cxy.wy*Math.sin(b);
+    var lat2=mapSt.lat+nm2/111320,lon2=mapSt.lon+em2/(111320*cL);
+    var tp=latLon2px(lat2,lon2,z);
+    var ttx=Math.floor(tp.px/256),tty=Math.floor(tp.py/256);
+    txMin=Math.min(txMin,ttx);txMax=Math.max(txMax,ttx);tyMin=Math.min(tyMin,tty);tyMax=Math.max(tyMax,tty);
+  }
+  txMin=Math.max(0,txMin-1);txMax=Math.min(n-1,txMax+1);tyMin=Math.max(0,tyMin-1);tyMax=Math.min(n-1,tyMax+1);
+  var cnt=(txMax-txMin+1)*(tyMax-tyMin+1);
+  var st=document.getElementById('tst');
+  if(cnt>100){if(st)st.textContent='\u30bf\u30a4\u30eb\u591a('+cnt+')';return;}
+  ctx.save();ctx.globalAlpha=mapSt.opacity;var drawn=0;
+  for(var tx=txMin;tx<=txMax;tx++){
+    for(var ty=tyMin;ty<=tyMax;ty++){
+      var e=getTile(z,tx,ty);if(!e.loaded)continue;
+      var c00=tp2c(tx*256,ty*256),c10=tp2c((tx+1)*256,ty*256),c01=tp2c(tx*256,(ty+1)*256);
+      ctx.setTransform((c10[0]-c00[0])/256,(c10[1]-c00[1])/256,(c01[0]-c00[0])/256,(c01[1]-c00[1])/256,c00[0],c00[1]);
+      try{ctx.drawImage(e.img,0,0);}catch(er){}drawn++;
+    }
+  }
+  ctx.restore();
+  if(st)st.textContent='z='+z+' '+drawn+'/'+cnt+'\u679a';
+}
+
+function extractBlock(src,key){
+  try{
+    if(!src||typeof src!=='string')return null;
+    var s=src.replace(/--\[\[[\s\S]*?--\]\]/g,'').replace(/--[^\n]*/g,'\n');
+    var ki=s.indexOf(key);if(ki<0)return null;
+    var fi=s.indexOf('flatten({',ki);
+    if(fi>=0){var d=1,k=fi+9;while(k<s.length&&d>0){if(s[k]==='{')d++;else if(s[k]==='}')d--;if(d>0)k++;}return s.slice(fi+9,k);}
+    var ei=s.indexOf('elements',ki);if(ei<0)return null;
+    var bi=s.indexOf('{',ei);if(bi<0)return null;
+    var d2=1,k2=bi+1;while(k2<s.length&&d2>0){if(s[k2]==='{')d2++;else if(s[k2]==='}')d2--;if(d2>0)k2++;}
+    return s.slice(bi,k2+1);
+  }catch(e){return null;}
+}
+var H={
+  line:function(L){return[{type:'line',length:+L}];},
+  kanwa:function(R,ang,kL){var aR=Math.abs(+R),aa=+ang-+kL/aR;if(aa<=0)throw new Error('kanwa:\u7de9\u548c\u9577\u904e\u5927 R='+R);
+    return[{type:'clothoid',length:+kL,startRadius:Infinity,endRadius:+R},{type:'arc',radius:+R,angle:aa,length:aR*aa},{type:'clothoid',length:+kL,startRadius:+R,endRadius:Infinity}];},
+  kanwaNokanto:function(R,ang,kL){var aR=Math.abs(+R),aa=+ang-+kL/aR;if(aa<=0)throw new Error('kanwaNokanto:\u7de9\u548c\u9577\u904e\u5927');
+    return[{type:'Nclothoid',length:+kL,startRadius:Infinity,endRadius:+R},{type:'Narc',radius:+R,angle:aa,length:aR*aa},{type:'Nclothoid',length:+kL,startRadius:+R,endRadius:Infinity}];},
+  nokanwa:function(R,ang){return[{type:'Narc',radius:+R,angle:+ang,length:Math.abs(+R)*(+ang)}];},
+  grade:function(g,L){return[{type:'grade',grade:+g,length:+L}];},
+  vcurve:function(g0,g1,L){return[{type:'vcurve',startGrade:+g0,endGrade:+g1,length:+L}];},
+  flatten:function(list){var r=[];if(!Array.isArray(list))return r;for(var i=0;i<list.length;i++){var v=list[i];if(Array.isArray(v)){for(var j=0;j<v.length;j++)r.push(v[j]);}else if(v&&typeof v.type==='string')r.push(v);}return r;}
+};
+function parseBlock(label,content){
+  if(!content){logWarn(label+': \u30d6\u30ed\u30c3\u30af\u306a\u3057');return null;}
+  try{
+    var js=content.replace(/math\.rad\(([^)]*)\)/g,'($1*Math.PI/180)').replace(/math\.huge/gi,'Infinity').replace(/=(?!=)/g,':');
+    var keys=Object.keys(H),vals=Object.values(H);
+    var els=new (Function.prototype.bind.apply(Function,[null].concat(keys,['"use strict";return flatten(['+js+']);'])))();
+    els=els.apply(null,vals);
+    if(!Array.isArray(els)){logErr(label+': \u914d\u5217\u3067\u306f\u306a\u3044');return{err:'not array'};}
+    logOk(label+': '+els.length+'\u8981\u7d20');
+    for(var i=0;i<els.length;i++){
+      var el=els[i];if(!el||typeof el.type!=='string')continue;
+      var d='',t=el.type;
+      if(t==='line')d='L='+(+el.length||0).toFixed(1)+'m';
+      else if(t==='arc'||t==='Narc')d='R='+(el.radius?el.radius.toFixed(1):'')+' \u03b8='+(el.angle!=null?(el.angle*180/Math.PI).toFixed(2)+'\u00b0':'?')+' L='+(el.length?el.length.toFixed(1):'?')+'m';
+      else if(t==='clothoid'||t==='Nclothoid')d='L='+(el.length?el.length.toFixed(1):'?')+'m R:'+(isFinite(el.startRadius)?el.startRadius.toFixed(0):'\u221e')+'\u2192'+(isFinite(el.endRadius)?el.endRadius.toFixed(0):'\u221e');
+      else if(t==='grade')d=el.grade+'\u2030 L='+el.length+'m';
+      else if(t==='vcurve')d=el.startGrade+'\u2192'+el.endGrade+'\u2030 L='+el.length+'m';
+      logInfo('  ['+i+'] '+t+'  '+d);
+    }
+    return els;
+  }catch(e){logErr(label+': '+e.message);return{err:e.message};}
+}
+
+var DS=1.0;
+function geoAlign(els){
+  if(!Array.isArray(els)||!els.length)return{segs:[],endX:0,endY:0,endH:0};
+  var segs=[],x=0,y=0,h=0;
+  for(var i=0;i<els.length;i++){
+    var el=els[i];
+    if(!el||typeof el.type!=='string'){segs.push({el:el||{type:'?'},pts:[{x:x,y:y}]});continue;}
+    var pts=[{x:x,y:y}],t=el.type;
+    try{
+      if(t==='line'){
+        var L=+el.length||0;if(L<=0){segs.push({el:el,pts:pts});continue;}
+        var n=Math.max(2,Math.ceil(L/DS)),ds=L/n;
+        for(var j=0;j<n;j++){x+=Math.cos(h)*ds;y+=Math.sin(h)*ds;pts.push({x:x,y:y});}
+      }else if(t==='arc'||t==='Narc'){
+        var R=el.radius;if(!R||!isFinite(R)){segs.push({el:el,pts:pts});continue;}
+        var L2=el.length!=null?Math.abs(el.length):Math.abs(R)*(el.angle||0);
+        if(!isFinite(L2)||L2<0.01){segs.push({el:el,pts:pts});continue;}
+        var k=1/R,n2=Math.max(2,Math.ceil(L2/DS)),ds2=L2/n2;
+        for(var j2=0;j2<n2;j2++){var hm=h-k*ds2/2;h-=k*ds2;x+=Math.cos(hm)*ds2;y+=Math.sin(hm)*ds2;pts.push({x:x,y:y});}
+      }else if(t==='clothoid'||t==='Nclothoid'){
+        var L3=el.length;if(!isFinite(L3)||L3<0.01){segs.push({el:el,pts:pts});continue;}
+        var k0=isFinite(el.startRadius)&&el.startRadius?1/el.startRadius:0;
+        var k1=isFinite(el.endRadius)&&el.endRadius?1/el.endRadius:0;
+        var n3=Math.max(2,Math.ceil(L3/DS)),ds3=L3/n3;
+        for(var j3=0;j3<n3;j3++){var km=k0+(k1-k0)*((j3+.5)*ds3/L3);var hm2=h-km*ds3/2;h-=km*ds3;x+=Math.cos(hm2)*ds3;y+=Math.sin(hm2)*ds3;pts.push({x:x,y:y});}
+      }
+    }catch(e2){logWarn('geoAlign: '+e2.message);}
+    segs.push({el:el,pts:pts});
+  }
+  return{segs:segs,endX:x,endY:y,endH:h};
+}
+function geoProfile(els){
+  if(!Array.isArray(els)||!els.length)return[];
+  var segs=[],d=0,e=0;
+  for(var i=0;i<els.length;i++){
+    var el=els[i];if(!el||typeof el.type!=='string')continue;
+    var pts=[],t=el.type;
+    try{
+      if(t==='grade'){
+        var k=(+el.grade||0)/1000,L=+el.length||0;
+        pts.push({d:d,e:e},{d:d+L,e:e+k*L});e+=k*L;d+=L;
+      }else if(t==='vcurve'){
+        var k0=(+el.startGrade||0)/1000,k1=(+el.endGrade||0)/1000,L2=+el.length||0;
+        if(L2<=0)continue;
+        var n=Math.max(4,Math.ceil(L2/5)),ds=L2/n;
+        for(var j=0;j<=n;j++){var s=j*ds;pts.push({d:d+s,e:e+k0*s+(k1-k0)*s*s/(2*L2)});}
+        e=pts[pts.length-1].e;d+=L2;
+      }
+    }catch(e2){logWarn('geoProfile: '+e2.message);}
+    if(pts.length)segs.push({el:el,pts:pts});
+  }
+  return segs;
+}
+
+function aLbl(el){
+  var t=el.type||'?',R=el.radius,L=el.length,A=el.angle,bot='';
+  if(t==='line')bot='L='+(+L||0).toFixed(0)+'m';
+  else if(t==='arc'||t==='Narc'){var parts=[];if(R!=null)parts.push('R'+Math.abs(R).toFixed(0)+'m');if(A!=null)parts.push((A*180/Math.PI).toFixed(1)+'\u00b0');bot=parts.join(' ');}
+  else if(t==='clothoid'||t==='Nclothoid'){var r=isFinite(el.endRadius)&&el.endRadius?el.endRadius:el.startRadius;var ps=[];if(r!=null)ps.push('R'+Math.abs(r).toFixed(0)+'m');if(L!=null)ps.push('L='+(+L).toFixed(0)+'m');bot=ps.join(' ');}
+  return{top:t,bot:bot};
+}
+function pLbl(el){
+  var t=el.type,bot='';
+  if(t==='grade')bot=el.grade+'\u2030  L='+el.length+'m';
+  else if(t==='vcurve')bot=el.startGrade+'\u2192'+el.endGrade+'\u2030  L='+el.length+'m';
+  return{top:t,bot:bot};
+}
+
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function drawLbl(ctx,lx,ly,ox,oy,top,bot,c){
+  var cx=lx+ox,cy=ly+oy;
+  ctx.font='600 11px -apple-system,sans-serif';var w1=ctx.measureText(top).width;
+  ctx.font='400 10px -apple-system,sans-serif';var w2=ctx.measureText(bot||'').width;
+  var bw=Math.max(w1,w2,28)+14,bh=bot?33:19,bx=cx-bw/2,by=cy-bh/2;
+  ctx.setLineDash([2,2]);ctx.strokeStyle=c;ctx.lineWidth=.5;
+  ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(cx,cy);ctx.stroke();ctx.setLineDash([]);
+  rr(ctx,bx,by,bw,bh,4);
+  ctx.fillStyle=dark()?'rgba(13,16,21,.93)':'rgba(255,255,255,.93)';ctx.fill();
+  ctx.strokeStyle=c;ctx.lineWidth=.8;ctx.stroke();
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font='600 11px -apple-system,sans-serif';ctx.fillStyle=c;ctx.fillText(top,cx,by+(bot?11:bh/2));
+  if(bot){ctx.font='400 10px -apple-system,sans-serif';ctx.fillStyle=dark()?'#888':'#777';ctx.fillText(bot,cx,by+22);}
+}
+
+var rafId=null;
+function scheduleRender(){if(rafId)return;rafId=requestAnimationFrame(function(){rafId=null;renderPlan();});}
+
+function niceStep(approx){
+  var a=Math.max(1e-6,Math.abs(approx)),p=Math.pow(10,Math.floor(Math.log10(a))),m=a/p;
+  return(m<1.5?1:m<3.5?2:m<7.5?5:10)*p;
+}
+
+function renderPlan(){
+  var cv=document.getElementById('pc'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  if(!W||!H)return;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=dark()?'#191d24':'#f8f8f6';ctx.fillRect(0,0,W,H);
+  try{drawTiles(ctx,W,H);}catch(e){logErr('\u30bf\u30a4\u30eb: '+e.message);}
+  if(V.scale>0&&isFinite(V.scale)){
+    var gl=dark()?'rgba(255,255,255,.04)':'rgba(0,0,0,.05)';
+    var wlt=c2w(0,0),wrb=c2w(W,H);
+    var step=niceStep(Math.max(Math.abs(wrb.wx-wlt.wx),Math.abs(wlt.wy-wrb.wy))/6);
+    if(step>0&&isFinite(step)){
+      ctx.strokeStyle=gl;ctx.lineWidth=.5;
+      for(var wx=Math.floor(Math.min(wlt.wx,wrb.wx)/step)*step;wx<=Math.max(wlt.wx,wrb.wx)+step*.1;wx+=step){var cxv=w2c(wx,0).cx;ctx.beginPath();ctx.moveTo(cxv,0);ctx.lineTo(cxv,H);ctx.stroke();}
+      for(var wy=Math.floor(Math.min(wlt.wy,wrb.wy)/step)*step;wy<=Math.max(wlt.wy,wrb.wy)+step*.1;wy+=step){var cyv=w2c(0,wy).cy;ctx.beginPath();ctx.moveTo(0,cyv);ctx.lineTo(W,cyv);ctx.stroke();}
+    }
+    var nice=niceStep(120/V.scale),bpx=nice*V.scale;
+    if(bpx>0&&isFinite(bpx)&&bpx<W*.6){
+      var bx=12,by=H-18;
+      ctx.fillStyle=dark()?'rgba(16,16,16,.72)':'rgba(255,255,255,.78)';ctx.fillRect(bx-2,by-11,bpx+4,17);
+      ctx.strokeStyle=dark()?'#999':'#555';ctx.lineWidth=1;ctx.strokeRect(bx-2,by-11,bpx+4,17);
+      ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx+bpx,by);ctx.lineWidth=1.5;ctx.stroke();
+      ctx.beginPath();ctx.moveTo(bx,by-4);ctx.lineTo(bx,by+4);ctx.moveTo(bx+bpx,by-4);ctx.lineTo(bx+bpx,by+4);ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle=dark()?'#ccc':'#333';ctx.font='9px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(nice>=1000?(nice/1000)+'km':nice+'m',bx+bpx/2,by-4);
+    }
+  }
+  var lblIdx=0;
+  for(var ti=0;ti<tracks.length;ti++){
+    var tr=tracks[ti];if(!tr.enabled||!tr.geo||!tr.geo.segs||!tr.geo.segs.length)continue;
+    for(var si=0;si<tr.geo.segs.length;si++){
+      var segpts=tr.geo.segs[si].pts;if(!segpts||segpts.length<2)continue;
+      ctx.beginPath();ctx.strokeStyle=colSeg(ti,si);ctx.lineWidth=2.3;
+      var first=true;
+      for(var pi=0;pi<segpts.length;pi++){
+        try{var wxy=l2w(segpts[pi].x,segpts[pi].y,tr);var cxy=w2c(wxy.wx,wxy.wy);if(first){ctx.moveTo(cxy.cx,cxy.cy);first=false;}else ctx.lineTo(cxy.cx,cxy.cy);}catch(e2){}
+      }
+      ctx.stroke();
+    }
+    for(var si2=1;si2<tr.geo.segs.length;si2++){
+      var sp=tr.geo.segs[si2].pts;if(!sp||!sp.length)continue;
+      try{var wj=l2w(sp[0].x,sp[0].y,tr);var cj=w2c(wj.wx,wj.wy);
+        if(cj.cx>-5&&cj.cx<W+5&&cj.cy>-5&&cj.cy<H+5){
+          ctx.beginPath();ctx.arc(cj.cx,cj.cy,3.5,0,Math.PI*2);
+          ctx.fillStyle=dark()?'rgba(255,255,255,0.65)':'rgba(0,0,0,0.42)';ctx.fill();
+          ctx.strokeStyle=colSeg(ti,si2);ctx.lineWidth=1;ctx.stroke();
+        }
+      }catch(e2){}
+    }
+    var tc=colTrack(ti);
+    for(var sgi=0;sgi<tr.geo.segs.length;sgi++){
+      var seg=tr.geo.segs[sgi];var spts=seg.pts;
+      if(!spts||spts.length<2){lblIdx++;continue;}
+      try{
+        var mi=Math.floor(spts.length/2);
+        var wm=l2w(spts[mi].x,spts[mi].y,tr);var cm=w2c(wm.wx,wm.wy);
+        var p0i=Math.max(0,mi-2),p1i=Math.min(spts.length-1,mi+2);
+        var w0=l2w(spts[p0i].x,spts[p0i].y,tr),w1=l2w(spts[p1i].x,spts[p1i].y,tr);
+        var c0=w2c(w0.wx,w0.wy),c1=w2c(w1.wx,w1.wy);
+        var tdx=c1.cx-c0.cx,tdy=c1.cy-c0.cy,tl=Math.sqrt(tdx*tdx+tdy*tdy)||1;
+        var sd=lblIdx%2?1:-1;
+        var lb=aLbl(seg.el);drawLbl(ctx,cm.cx,cm.cy,-tdy/tl*52*sd,tdx/tl*52*sd,lb.top,lb.bot,tc);
+      }catch(e2){}
+      lblIdx++;
+    }
+    try{var wo=l2w(0,0,tr);var co=w2c(wo.wx,wo.wy);if(co.cx>-10&&co.cx<W+10&&co.cy>-10&&co.cy<H+10){ctx.beginPath();ctx.arc(co.cx,co.cy,4,0,Math.PI*2);ctx.fillStyle=tc;ctx.fill();ctx.font='bold 9px -apple-system,sans-serif';ctx.fillStyle=tc;ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText('\u59cb'+( ti+1),co.cx+6,co.cy+1);}}catch(e2){}
+    try{var g=tr.geo;var we=l2w(g.endX,g.endY,tr);var ce=w2c(we.wx,we.wy);if(ce.cx>-10&&ce.cx<W+10&&ce.cy>-10&&ce.cy<H+10){ctx.beginPath();ctx.arc(ce.cx,ce.cy,3,0,Math.PI*2);ctx.strokeStyle=tc;ctx.lineWidth=1.5;ctx.stroke();ctx.font='bold 9px -apple-system,sans-serif';ctx.fillStyle=tc;ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText('\u7d42'+(ti+1),ce.cx+6,ce.cy+1);}}catch(e2){}
+  }
+}
+
+function niceTick(range,count){
+  var a=Math.max(1e-9,Math.abs(range/count)),p=Math.pow(10,Math.floor(Math.log10(a))),m=a/p;
+  return(m<1.5?1:m<3.5?2:m<7.5?5:10)*p;
+}
+function renderProfile(){
+  var cv=document.getElementById('rc');
+  var chained=document.getElementById('profchain')&&document.getElementById('profchain').checked;
+  // チェーン表示モード
+  var chains=chained?buildProfileChain():null;
+  // 通常: tracks の profSegs を直接使う
+  var profTracks=tracks.filter(function(tr){return tr.enabled&&tr.profSegs&&tr.profSegs.length>0;});
+  var displayItems=chained&&chains?chains:profTracks.map(function(tr,i){return{segs:tr.profSegs,name:tr.name,trackIdx:tracks.indexOf(tr),chained:false};});
+  if(!displayItems.length){
+    cv.width=400;var ctx0=cv.getContext('2d');ctx0.clearRect(0,0,400,cv.height);
+    ctx0.fillStyle=dark()?'#191d24':'#fff';ctx0.fillRect(0,0,400,cv.height);
+    document.getElementById('pfslen').textContent='';return;
+  }
+  var maxD=0,eMin=1e9,eMax=-1e9;
+  for(var ii=0;ii<displayItems.length;ii++){
+    var segs=displayItems[ii].segs;
+    for(var si=0;si<segs.length;si++){var pts=segs[si].pts;if(!pts||!pts.length)continue;maxD=Math.max(maxD,pts[pts.length-1].d);for(var pi=0;pi<pts.length;pi++){eMin=Math.min(eMin,pts[pi].e);eMax=Math.max(eMax,pts[pi].e);}}
+  }
+  if(!isFinite(eMin)||!isFinite(eMax)||eMin>=eMax){eMin-=1;eMax+=1;}
+  var cW=Math.max(500,Math.ceil(maxD*PPM)+100),cH=cv.height;
+  cv.width=cW;var ctx=cv.getContext('2d');ctx.clearRect(0,0,cW,cH);
+  ctx.fillStyle=dark()?'#191d24':'#fff';ctx.fillRect(0,0,cW,cH);
+  var eR=eMax-eMin,MT=44,MB=22,ML=56,MR=10,dH=cH-MT-MB,dW=cW-ML-MR;
+  function tp(d,e){return{cx:ML+(d/Math.max(maxD,1))*dW,cy:MT+(1-(e-eMin)/eR)*dH};}
+  var gl=dark()?'rgba(255,255,255,.04)':'rgba(0,0,0,.05)',txc=dark()?'#666':'#999';
+  var et=niceTick(eR,4),es=Math.floor(eMin/et)*et;
+  for(var ev=es;ev<=eMax+et*.01;ev+=et){var tpv=tp(0,ev);if(tpv.cy<MT-8||tpv.cy>cH-MB+8)continue;ctx.strokeStyle=gl;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(ML,tpv.cy);ctx.lineTo(cW-MR,tpv.cy);ctx.stroke();ctx.fillStyle=txc;ctx.font='9px sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(ev.toFixed(3)+'m',ML-4,tpv.cy);}
+  var dt=niceTick(maxD,Math.min(12,Math.max(4,Math.floor(maxD/50))));
+  for(var dv=0;dv<=maxD+dt*.01;dv+=dt){var tpd=tp(dv,0);if(tpd.cx<ML-8||tpd.cx>cW-MR+8)continue;ctx.strokeStyle=gl;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(tpd.cx,MT);ctx.lineTo(tpd.cx,cH-MB);ctx.stroke();ctx.fillStyle=txc;ctx.font='9px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(dv+'m',tpd.cx,cH-MB+3);}
+  ctx.strokeStyle=dark()?'#555':'#bbb';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(ML,MT);ctx.lineTo(ML,cH-MB);ctx.lineTo(cW-MR,cH-MB);ctx.stroke();
+  // チェーン境界線
+  if(chained&&chains){
+    for(var ci=0;ci<chains.length;ci++){
+      var csegs=chains[ci].segs;if(!csegs.length)continue;
+      // 各 track の境界を薄い縦線で表示
+      var prevD=0;var chainBdry=[];
+      for(var csi=0;csi<csegs.length;csi++){
+        var cpts=csegs[csi].pts;if(!cpts||!cpts.length)continue;
+        var lastD=cpts[cpts.length-1].d;
+        if(csi>0){var firstD=cpts[0].d;if(Math.abs(firstD-prevD)>0.1)chainBdry.push(firstD);}
+        prevD=lastD;
+      }
+      chainBdry.forEach(function(bd){
+        var tbd=tp(bd,eMin);
+        ctx.strokeStyle=dark()?'rgba(255,255,255,.15)':'rgba(0,0,0,.12)';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+        ctx.beginPath();ctx.moveTo(tbd.cx,MT);ctx.lineTo(tbd.cx,cH-MB);ctx.stroke();ctx.setLineDash([]);
+      });
+    }
+  }
+  var pi2=0;
+  for(var ii2=0;ii2<displayItems.length;ii2++){
+    var item=displayItems[ii2],tc=colTrack(item.trackIdx);
+    var segs2=item.segs;
+    for(var si2=0;si2<segs2.length;si2++){
+      var pts2=segs2[si2].pts;if(!pts2||!pts2.length)continue;
+      ctx.beginPath();ctx.strokeStyle=colSeg(item.trackIdx,si2);ctx.lineWidth=2.2;
+      for(var j=0;j<pts2.length;j++){var tpj=tp(pts2[j].d,pts2[j].e);if(j===0)ctx.moveTo(tpj.cx,tpj.cy);else ctx.lineTo(tpj.cx,tpj.cy);}
+      ctx.stroke();
+    }
+    for(var sj=1;sj<segs2.length;sj++){
+      var pp=segs2[sj].pts;if(!pp||!pp.length)continue;
+      var tpp=tp(pp[0].d,pp[0].e);
+      ctx.beginPath();ctx.arc(tpp.cx,tpp.cy,3,0,Math.PI*2);
+      ctx.fillStyle=dark()?'rgba(255,255,255,0.6)':'rgba(0,0,0,0.38)';ctx.fill();
+      ctx.strokeStyle=colSeg(item.trackIdx,sj);ctx.lineWidth=.8;ctx.stroke();
+    }
+    for(var sk=0;sk<segs2.length;sk++){
+      var sek=segs2[sk];var ptsk=sek.pts;if(!ptsk||!ptsk.length)continue;
+      var mik=Math.floor(ptsk.length/2);var tpmk=tp(ptsk[mik].d,ptsk[mik].e);
+      var lb=pLbl(sek.el);drawLbl(ctx,tpmk.cx,tpmk.cy,0,(pi2%2?-1:1)*42,lb.top,lb.bot,tc);pi2++;
+    }
+    // チェーン名を先頭に表示
+    if(item.chained&&segs2.length){
+      var fp=segs2[0].pts;if(fp&&fp.length){var tpn=tp(fp[0].d,eMax);ctx.font='bold 9px sans-serif';ctx.fillStyle=tc;ctx.textAlign='left';ctx.textBaseline='bottom';ctx.fillText(item.name,tpn.cx+2,MT-2);}
+    }
+  }
+  ctx.fillStyle=txc;ctx.font='9px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText('\u8ddd\u96e2 [m]',cW/2,cH-13);
+  document.getElementById('pfslen').textContent=maxD.toFixed(0)+'m';
+}
+
+
+var ptrs=new Map(),prevDist=null;
+function ppos(e,cv){var r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height};}
+(function(){
+  var cv=document.getElementById('pc');
+  cv.addEventListener('pointerdown',function(e){e.preventDefault();try{cv.setPointerCapture(e.pointerId);}catch(er){}ptrs.set(e.pointerId,ppos(e,cv));if(ptrs.size===1)prevDist=null;},{passive:false});
+  cv.addEventListener('pointermove',function(e){
+    if(!ptrs.has(e.pointerId))return;e.preventDefault();
+    var prev=ptrs.get(e.pointerId),curr=ppos(e,cv);ptrs.set(e.pointerId,curr);
+    if(ptrs.size===1){V.tx+=curr.x-prev.x;V.ty+=curr.y-prev.y;updateZl();scheduleRender();}
+    else if(ptrs.size>=2){var arr=[...ptrs.values()],dist=Math.hypot(arr[0].x-arr[1].x,arr[0].y-arr[1].y);if(prevDist&&prevDist>0)zoomAt((arr[0].x+arr[1].x)/2,(arr[0].y+arr[1].y)/2,dist/prevDist);prevDist=dist;}
+  },{passive:false});
+  function up(e){ptrs.delete(e.pointerId);if(ptrs.size<2)prevDist=null;}
+  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  cv.addEventListener('wheel',function(e){e.preventDefault();var p=ppos(e,cv);zoomAt(p.x,p.y,e.deltaY<0?1.12:1/1.12);},{passive:false});
+})();
+
+var tracks=[],activeIdx=0,firstFitDone=false;
+function makeTrack(name,src,bear){return{id:'t'+Math.random().toString(36).slice(2),name:name||'\u7dda\u5f62',src:src||'',offsetX:0,offsetY:0,offsetBear:bear!=null?bear:90,enabled:true,geo:null,profSegs:[],alignLen:0,profLen:0,maxCantDeg:5.5,platformSide:'R',levelDoors:false,carWidth:2900};}
+
+function updateLenBar(tr){
+  var aLen='—',pLen='—';
+  if(tr.geo&&tr.geo.segs){var tot=0;for(var i=0;i<tr.geo.segs.length;i++)tot+=(+tr.geo.segs[i].el.length||0);aLen=tot.toFixed(1)+'m';tr.alignLen=tot;}
+  if(tr.profSegs&&tr.profSegs.length){var tot2=0;for(var i2=0;i2<tr.profSegs.length;i2++)tot2+=(+tr.profSegs[i2].el.length||0);pLen=tot2.toFixed(1)+'m';tr.profLen=tot2;}
+  document.getElementById('lba').textContent=aLen;
+  document.getElementById('lbp').textContent=pLen;
+  var diff=document.getElementById('lbdiff');
+  if(tr.alignLen>0&&tr.profLen>0){var d=tr.profLen-tr.alignLen;diff.style.display='inline';diff.className='lbdiff '+(Math.abs(d)<0.5?'ok2':'warn');diff.textContent=(d>=0?'+':'')+d.toFixed(1)+'m';}
+  else diff.style.display='none';
+}
+
+function renderTabs(){
+  var div=document.getElementById('tabs'),h='';
+  for(var i=0;i<tracks.length;i++){
+    var tr=tracks[i],a=i===activeIdx;
+    h+='<div class="tab'+(a?' active':'')+'" data-i="'+i+'" onclick="selTrack('+i+')" title="'+esc(tr.name)+'">';
+    h+='<span class="tdot" style="background:'+colTrack(i)+'"></span>';
+    h+='<span>'+esc(tr.name)+'</span>';
+    if(tracks.length>1)h+='<span class="tx" onclick="event.stopPropagation();delTrack('+i+')">\u2715</span>';
+    h+='</div>';
+  }
+  h+='<button class="tadd" onclick="addTrack()" title="\u7dda\u5f62\u3092\u8ffd\u52a0">\uff0b</button>';
+  h+='<div class="tborder"></div>';
+  div.innerHTML=h;
+  populateConnDst();
+  // アクティブタブをスクロールで可視化
+  setTimeout(function(){
+    var act=div.querySelector('.tab.active');
+    if(act&&act.scrollIntoView){try{act.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});}catch(e){}}
+  },0);
+}
+// タブ: ホイール縦回転を横スクロールに変換 + ドラッグスクロール
+(function(){
+  var initDone=false;
+  function setup(){
+    if(initDone)return;
+    var tabs=document.getElementById('tabs');if(!tabs)return;
+    initDone=true;
+    tabs.addEventListener('wheel',function(e){
+      var ady=Math.abs(e.deltaY),adx=Math.abs(e.deltaX);
+      if(ady>adx){e.preventDefault();tabs.scrollLeft+=e.deltaY;}
+    },{passive:false});
+    // Shift未押下でも横スクロール可能に
+    var dragging=false,startX=0,startSL=0;
+    tabs.addEventListener('mousedown',function(e){
+      // タブ自体やボタンのクリックはスルー
+      if(e.target.closest('.tab')||e.target.closest('.tadd')||e.target.closest('.tx'))return;
+      dragging=true;startX=e.clientX;startSL=tabs.scrollLeft;e.preventDefault();
+    });
+    window.addEventListener('mousemove',function(e){if(!dragging)return;tabs.scrollLeft=startSL-(e.clientX-startX);});
+    window.addEventListener('mouseup',function(){dragging=false;});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);
+  else setup();
+})();
+
+function loadOCUI(i){
+  var tr=tracks[i];
+  document.getElementById('tname').value=tr.name;
+  document.getElementById('ox').value=(tr.offsetX||0).toFixed(2);
+  document.getElementById('oy').value=(tr.offsetY||0).toFixed(2);
+  document.getElementById('obr').value=(tr.offsetBear!=null?tr.offsetBear:90).toFixed(1);
+  document.getElementById('oen').checked=tr.enabled!==false;
+  document.getElementById('ocant').value=(tr.maxCantDeg!=null?tr.maxCantDeg:5.5).toFixed(1);
+  refreshCantHint(tr);
+  document.getElementById('oleveldoors').checked=tr.levelDoors===true;
+  document.getElementById('opfside').value=(tr.platformSide==='L')?'L':'R';
+  document.getElementById('opfcarw').value=(tr.carWidth!=null?tr.carWidth:2900);
+  updateLenBar(tr);populateConnDst();
+}
+
+// 最大カント角: 最小半径からの推奨値を計算
+// 狭軌(1067mm)の最大カント≈105mm≈5.62°を上限とする目安。
+// 急曲線ほど高速走行時の遠心力補償に大きいカントが必要なため、
+// 半径が小さい線形ほど高い値を推奨する。
+function recommendCant(tr){
+  if(!tr||!tr.geo||!tr.geo.segs||!tr.geo.segs.length)return{deg:0,note:'カーブなし'};
+  var minR=Infinity,hasCurve=false;
+  for(var i=0;i<tr.geo.segs.length;i++){
+    var el=tr.geo.segs[i].el;if(!el)continue;
+    var rs=[];
+    if(el.type==='arc'||el.type==='Narc'){if(el.radius&&isFinite(el.radius))rs.push(Math.abs(el.radius));}
+    else if(el.type==='clothoid'||el.type==='Nclothoid'){
+      if(el.startRadius&&isFinite(el.startRadius))rs.push(Math.abs(el.startRadius));
+      if(el.endRadius&&isFinite(el.endRadius))rs.push(Math.abs(el.endRadius));
+    }
+    for(var k=0;k<rs.length;k++){if(rs[k]>0.5){minR=Math.min(minR,rs[k]);hasCurve=true;}}
+  }
+  if(!hasCurve)return{deg:0,note:'カーブなし→0°推奨'};
+  var deg;
+  if(minR<200)deg=5.5;
+  else if(minR<400)deg=5.0;
+  else if(minR<800)deg=4.0;
+  else if(minR<1500)deg=3.0;
+  else deg=2.0;
+  return{deg:deg,note:'最小R='+minR.toFixed(0)+'m → 推奨'+deg.toFixed(1)+'°',minR:minR};
+}
+function refreshCantHint(tr){
+  var el=document.getElementById('canthint');if(!el)return;
+  var rec=recommendCant(tr);
+  el.textContent=rec.note;
+}
+window.onCantChg=function(){
+  var v=parseFloat(document.getElementById('ocant').value);
+  if(!isFinite(v))v=0;v=Math.max(0,Math.min(15,v));
+  tracks[activeIdx].maxCantDeg=v;
+};
+window.suggestCant=function(){
+  var tr=tracks[activeIdx],rec=recommendCant(tr);
+  if(rec.deg>=0){
+    tr.maxCantDeg=rec.deg;
+    document.getElementById('ocant').value=rec.deg.toFixed(1);
+    refreshCantHint(tr);
+    logOk('推奨カント角を適用: '+rec.deg.toFixed(1)+'° ('+rec.note+')');
+  }
+};
+
+// 客用扉高さ平準化(door-leveling)
+// この線形全体(他線形にまたがらない、線形内の全区間)に適用される。
+// ホーム側は L(左)/R(右)。R は既存の +right(offset) 方向と同じ符号。
+window.onPlatformChg=function(){
+  var tr=tracks[activeIdx];
+  tr.levelDoors=document.getElementById('oleveldoors').checked;
+  tr.platformSide=(document.getElementById('opfside').value==='L')?'L':'R';
+  var cw=parseFloat(document.getElementById('opfcarw').value);
+  tr.carWidth=(isFinite(cw)&&cw>0)?cw:2900;
+};
+
+window.selTrack=function(i){tracks[activeIdx].src=document.getElementById('ta').value;activeIdx=i;document.getElementById('ta').value=tracks[i].src;loadOCUI(i);renderTabs();};
+window.addTrack=function(){
+  tracks[activeIdx].src=document.getElementById('ta').value;
+  var i=tracks.length;tracks.push(makeTrack('\u7dda\u5f62'+(i+1),DEF2));
+  activeIdx=i;renderTabs();document.getElementById('ta').value=tracks[i].src;loadOCUI(i);parseActive();
+};
+window.delTrack=function(i){
+  if(tracks.length<=1)return;tracks.splice(i,1);
+  if(activeIdx>=tracks.length)activeIdx=tracks.length-1;
+  renderTabs();document.getElementById('ta').value=tracks[activeIdx].src;loadOCUI(activeIdx);scheduleRender();renderProfile();
+};
+window.onNameChg=function(){var v=document.getElementById('tname').value;tracks[activeIdx].name=v||'\u7dda\u5f62'+(activeIdx+1);renderTabs();};
+window.onOC=function(){var tr=tracks[activeIdx];tr.offsetX=parseFloat(document.getElementById('ox').value)||0;tr.offsetY=parseFloat(document.getElementById('oy').value)||0;tr.offsetBear=parseFloat(document.getElementById('obr').value)||90;tr.enabled=document.getElementById('oen').checked;scheduleRender();};
+window.resetOC=function(){var tr=tracks[activeIdx];tr.offsetX=0;tr.offsetY=0;tr.offsetBear=90;tr.enabled=true;loadOCUI(activeIdx);scheduleRender();};
+
+function populateConnDst(){
+  var sel=document.getElementById('conndst');if(!sel)return;
+  var h='<option value="">\u2014 \u63a5\u7d9a\u5148\u3092\u9078\u629e \u2014</option>';
+  for(var i=0;i<tracks.length;i++){
+    if(i===activeIdx)continue;
+    var n=esc(tracks[i].name);
+    if(tracks[i].geo&&tracks[i].geo.segs&&tracks[i].geo.segs.length)h+='<option value="'+i+'-end">'+n+' \u7d42\u7aef</option>';
+    h+='<option value="'+i+'-start">'+n+' \u59cb\u7aef</option>';
+  }
+  sel.innerHTML=h;
+}
+window.connectTo=function(){
+  var val=document.getElementById('conndst').value;if(!val){logWarn('\u63a5\u7d9a\u5148\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044');return;}
+  var parts=val.split('-'),i=parseInt(parts[0]),point=parts[1];
+  var src=tracks[i];if(!src)return;var tr=tracks[activeIdx];
+  if(point==='end'){
+    if(!src.geo){logWarn('\u63a5\u7d9a\u5148\u304c\u672a\u8a08\u7b97\u3067\u3059');return;}
+    var we=l2w(src.geo.endX,src.geo.endY,src);
+    var srcTh=(90-(src.offsetBear||90))*Math.PI/180,worldEndH=srcTh+src.geo.endH;
+    var newBear=((90-worldEndH*180/Math.PI)%360+360)%360;
+    tr.offsetX=we.wx;tr.offsetY=we.wy;tr.offsetBear=newBear;
+  }else{
+    var ws=l2w(0,0,src);tr.offsetX=ws.wx;tr.offsetY=ws.wy;tr.offsetBear=src.offsetBear||90;
+  }
+  loadOCUI(activeIdx);scheduleRender();
+  logOk('\u63a5\u7d9a ['+src.name+' '+(point==='end'?'\u7d42\u7aef':'\u59cb\u7aef')+'] \u2192 X='+tr.offsetX.toFixed(2)+' Y='+tr.offsetY.toFixed(2)+' \u65b9\u4f4d='+tr.offsetBear.toFixed(1)+'\u00b0');
+};
+
+function parseTrack(tr){
+  try{
+    var ae=parseBlock(tr.name+'(\u5e73\u9762)',extractBlock(tr.src,'alignment'));
+    var pe=parseBlock(tr.name+'(\u7e26\u65ad)',extractBlock(tr.src,'profile'));
+    if(ae&&!ae.err&&Array.isArray(ae))tr.geo=geoAlign(ae);else tr.geo=null;
+    tr.profSegs=(pe&&!pe.err&&Array.isArray(pe))?geoProfile(pe):[];
+  }catch(e){logErr(tr.name+': '+e.message+(e.stack?'\n'+e.stack.split('\n').slice(0,2).join('\n'):''));tr.geo=null;tr.profSegs=[];}
+}
+
+var timer=null;
+function parseActive(){
+  var tr=tracks[activeIdx];tr.src=document.getElementById('ta').value;
+  log('\u2500\u2500\u2500\u2500 ['+tr.name+'] \u89e3\u6790 \u2500\u2500\u2500\u2500');
+  parseTrack(tr);
+  var hasA=tr.geo&&tr.geo.segs&&tr.geo.segs.length>0;
+  if(hasA){var tot=0;for(var i=0;i<tr.geo.segs.length;i++)tot+=(+tr.geo.segs[i].el.length||0);badge(true,tr.name+' \u5e73\u9762'+tr.geo.segs.length+'\u8981\u7d20 '+tot.toFixed(0)+'m');logOk('\u5e73\u9762: '+tot.toFixed(1)+'m  end=('+tr.geo.endX.toFixed(1)+','+tr.geo.endY.toFixed(1)+') H='+(tr.geo.endH*180/Math.PI).toFixed(1)+'\u00b0');}
+  else if(tr.geo===null)badge(false,'\u5e73\u9762\u7dda\u5f62\u30a8\u30e9\u30fc');
+  else badge(true,'OK');
+  updateLenBar(tr);populateConnDst();refreshCantHint(tr);
+  if(!firstFitDone&&hasA){firstFitDone=true;window.fitView();}else scheduleRender();
+  renderProfile();
+}
+document.getElementById('ta').addEventListener('input',function(e){clearTimeout(timer);timer=setTimeout(function(){tracks[activeIdx].src=e.target.value;parseActive();},70);});
+
+function dlFile(filename,content){
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:'text/plain;charset=utf-8'}));
+  a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+}
+var MAGIC='--[[ === RAILWAY_ALIGNMENT_COMBINED_EXPORT ===\n     \u7dda\u5f62\u30a8\u30c7\u30a3\u30bf\u30fc \u307e\u3068\u3081\u3066\u51fa\u529b\u30d5\u30a1\u30a4\u30eb\n     \u300c\u307e\u3068\u3081\u3066\u30a4\u30f3\u30dd\u30fc\u30c8\u300d\u3067\u5168\u7dda\u5f62\u3092\u5fa9\u5143\u3067\u304d\u307e\u3059\n--]]\n\n';
+window.expCurrent=function(){var tr=tracks[activeIdx];dlFile(tr.name+'.lua',tr.src);logOk('\u51fa\u529b: '+tr.name+'.lua');};
+// 線形1基準の相対座標を計算するヘルパー
+// offsetBear: エディタbearing(度) = 北0°時計回り(offsetBear=90が東)
+// 出力: {fwd: 前方m, rgt: 右方m, bear: 相対bearing度}
+function calcRelCoords(tr, first){
+  // offsetBear は北基準時計回りのbearingと等価
+  // l2w: th=(90-offsetBear)*PI/180 = 数学的東基準反時計回り角
+  // fwdE=sin(bearing), fwdN=cos(bearing) で東北成分が得られる
+  var b1 = (first.offsetBear || 90);
+  var b1r = b1 * Math.PI / 180;
+  var fwdE = Math.sin(b1r), fwdN = Math.cos(b1r);
+  var rgtE = Math.cos(b1r), rgtN = -Math.sin(b1r);
+
+  var relE = (tr.offsetX || 0) - (first.offsetX || 0);
+  var relN = (tr.offsetY || 0) - (first.offsetY || 0);
+
+  var compFwd = relE * fwdE + relN * fwdN;
+  var compRgt = relE * rgtE + relN * rgtN;
+  var relBear = (tr.offsetBear || 90) - b1;
+
+  return {fwd: compFwd, rgt: compRgt, bear: relBear};
+}
+
+function makeTrackHeader(tr, first){
+  var rel = calcRelCoords(tr, first);
+  var cant=(tr.maxCantDeg!=null?tr.maxCantDeg:5.5);
+  var pfSide=(tr.platformSide==='L')?'L':'R';
+  var carW=(tr.carWidth!=null?tr.carWidth:2900);
+  var levelDoors=(tr.levelDoors===true);
+  return '--[[TRACK_BEGIN name="'+tr.name.replace(/"/g,"'")+'" offsetFwd='+rel.fwd.toFixed(6)+' offsetRgt='+rel.rgt.toFixed(6)+' relBearing='+rel.bear.toFixed(6)+' maxCantDeg='+cant.toFixed(3)+' enabled='+(tr.enabled!==false)
+    +' platformSide="'+pfSide+'" levelDoors='+levelDoors+' carWidth='+carW.toFixed(1)+']]';
+}
+
+window.expAll=function(){
+  if(!tracks.length)return;
+  var first=tracks[0];
+  var out=MAGIC;
+  for(var i=0;i<tracks.length;i++){
+    var tr=tracks[i];
+    out+=makeTrackHeader(tr,first)+'\n';
+    out+=tr.src+'\n--[[TRACK_END]]\n\n';
+  }
+  dlFile('combined_tracks.txt',out);logOk('\u307e\u3068\u3081\u3066\u51fa\u529b: '+tracks.length+'\u7dda\u5f62');
+};
+window.expAllModule=function(){
+  if(!tracks.length)return;
+  var first=tracks[0];
+  var inner='';
+  for(var i=0;i<tracks.length;i++){
+    var tr=tracks[i];
+    // コメントを除去（--[[ ... ]] および -- 行コメント）
+    var cleanSrc=tr.src
+      .replace(/--\[\[[\s\S]*?\]\]/g,'')   // --[[ ブロックコメント除去
+      .replace(/--[^\n]*/g,'')              // -- 行コメント除去
+      .replace(/\n{3,}/g,'\n\n')           // 連続空行を圧縮
+      .replace(/^\n+/,'').replace(/\n+$/,''); // 前後の空行除去
+    inner+=makeTrackHeader(tr,first)+'\n';
+    inner+=cleanSrc+'\n--[[TRACK_END]]\n\n';
+  }
+  var out='return [==[\n'+inner+']==]\n';
+  dlFile('combined_tracks.lua',out);logOk('\u307e\u3068\u3081\u3066\u51fa\u529b(ModuleScript): '+tracks.length+'\u7dda\u5f62');
+};
+window.expAllIndividual=function(){
+  for(var i=0;i<tracks.length;i++){
+    (function(idx){setTimeout(function(){dlFile(tracks[idx].name+'.lua',tracks[idx].src);logOk('\u51fa\u529b: '+tracks[idx].name+'.lua');},idx*250);})(i);
+  }
+  log('\u500b\u5225\u4e00\u62ec\u51fa\u529b: '+tracks.length+'\u7dda\u5f62');
+};
+
+window.importFiles=function(files,asNewTabs){
+  if(!files||!files.length)return;
+  var arr=Array.from(files);
+  arr.forEach(function(file){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var content=e.target.result,name=file.name.replace(/\.\w+$/,'');
+      if(asNewTabs){
+        if(content.indexOf('--[[TRACK_BEGIN')>=0){parseCombinedContent(content);return;}
+        var nt=makeTrack(name,content);tracks.push(nt);activeIdx=tracks.length-1;renderTabs();document.getElementById('ta').value=content;loadOCUI(activeIdx);parseActive();logOk('\u30a4\u30f3\u30dd\u30fc\u30c8: '+file.name);
+      }else{
+        tracks[activeIdx].src=content;tracks[activeIdx].name=name;document.getElementById('ta').value=content;renderTabs();loadOCUI(activeIdx);parseActive();logOk('\u4e0a\u66f8\u304d\u30a4\u30f3\u30dd\u30fc\u30c8: '+file.name);
+      }
+    };
+    reader.onerror=function(){logErr('\u30d5\u30a1\u30a4\u30eb\u8aad\u307f\u8fbc\u307f\u5931\u6557: '+file.name);};
+    reader.readAsText(file,'utf-8');
+  });
+};
+window.importCombined=function(files){
+  if(!files||!files.length)return;
+  var reader=new FileReader();
+  reader.onload=function(e){parseCombinedContent(e.target.result);};
+  reader.onerror=function(){logErr('\u30d5\u30a1\u30a4\u30eb\u8aad\u307f\u8fbc\u307f\u5931\u6557');};
+  reader.readAsText(files[0],'utf-8');
+};
+function parseCombinedContent(content){
+  var re=/--\[\[TRACK_BEGIN\s+([\s\S]*?)\]\]([\s\S]*?)--\[\[TRACK_END\]\]/g,m,found=0;
+  var batchFirst=null;
+  while((m=re.exec(content))!==null){
+    var meta=m[1],src=m[2].trim();
+    var nm=meta.match(/name="([^"]*)"/),oxm=meta.match(/offsetX=([\d.-]+)/),oym=meta.match(/offsetY=([\d.-]+)/),brm=meta.match(/bearing=([\d.-]+)/),
+        fwm=meta.match(/offsetFwd=([\d.-]+)/),rgm=meta.match(/offsetRgt=([\d.-]+)/),rbm=meta.match(/relBearing=([\d.-]+)/),
+        enm=meta.match(/enabled=(true|false)/),cnm=meta.match(/maxCantDeg=([\d.-]+)/),
+        pfsm=meta.match(/platformSide="?([LRlr])"?/),ldm=meta.match(/levelDoors=(true|false)/),
+        cwm=meta.match(/carWidth=([\d.-]+)/);
+    var nt=makeTrack(nm?nm[1]:'\u7dda\u5f62'+(tracks.length+1),src);
+    if(enm)nt.enabled=enm[1]==='true';
+    if(cnm)nt.maxCantDeg=parseFloat(cnm[1]);
+    if(pfsm)nt.platformSide=pfsm[1].toUpperCase();
+    if(ldm)nt.levelDoors=(ldm[1]==='true');
+    if(cwm)nt.carWidth=parseFloat(cwm[1]);
+    if(fwm&&rgm&&rbm){
+      // \u65b0\u5f62\u5f0f(\u76f8\u5bfe\u5ea7\u6a19): offsetFwd/offsetRgt/relBearing \u3092\u3001\u3053\u306e\u30a4\u30f3\u30dd\u30fc\u30c8\u5185\u306e\u6700\u521d\u306e\u7dda\u5f62(batchFirst)\u3092\u57fa\u6e96\u306b
+      // offsetX/offsetY/offsetBear \u3078\u9006\u5909\u63db\u3059\u308b\uff08calcRelCoords\u306e\u9006\u5909\u63db\u3001\u56de\u8ee2\u884c\u5217\u306e\u9006\u884c\u5217=\u81ea\u5206\u81ea\u8eab\uff09
+      var compFwd=parseFloat(fwm[1]),compRgt=parseFloat(rgm[1]),relBear=parseFloat(rbm[1]);
+      var baseX=batchFirst?batchFirst.offsetX:0,baseY=batchFirst?batchFirst.offsetY:0,baseBear=batchFirst?batchFirst.offsetBear:90;
+      var fb=baseBear*Math.PI/180;
+      var relE=compFwd*Math.sin(fb)+compRgt*Math.cos(fb);
+      var relN=compFwd*Math.cos(fb)-compRgt*Math.sin(fb);
+      nt.offsetX=baseX+relE;
+      nt.offsetY=baseY+relN;
+      nt.offsetBear=baseBear+relBear;
+    }else{
+      // \u65e7\u5f62\u5f0f(\u7d76\u5bfe\u5ea7\u6a19)
+      if(oxm)nt.offsetX=parseFloat(oxm[1]);if(oym)nt.offsetY=parseFloat(oym[1]);if(brm)nt.offsetBear=parseFloat(brm[1]);
+    }
+    if(!batchFirst)batchFirst=nt;
+    tracks.push(nt);found++;
+  }
+  if(found>0){activeIdx=tracks.length-found;renderTabs();document.getElementById('ta').value=tracks[activeIdx].src;loadOCUI(activeIdx);for(var i=tracks.length-found;i<tracks.length;i++)parseTrack(tracks[i]);renderProfile();scheduleRender();logOk('\u307e\u3068\u3081\u3066\u30a4\u30f3\u30dd\u30fc\u30c8: '+found+'\u7dda\u5f62');}
+  else logWarn('\u307e\u3068\u3081\u3066\u30a4\u30f3\u30dd\u30fc\u30c8: \u7dda\u5f62\u30c7\u30fc\u30bf\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f');
+}
+
+(function(){
+  var rp=document.getElementById('rp'),cv=document.getElementById('pc');
+  function sync(){var w=rp.clientWidth,h=rp.clientHeight;if(w>0&&h>0){cv.width=Math.round(w);cv.height=Math.round(h);updateZl();scheduleRender();}}
+  if(window.ResizeObserver)new ResizeObserver(sync).observe(rp);
+  else{window.addEventListener('resize',sync);sync();}
+})();
+
+var DEF='--[[\n  \u7dda\u5f62\u30c7\u30fc\u30bf\u5b9a\u7fa9\u30d5\u30a1\u30a4\u30eb\n  ====================================================================\n  \u25a0 \u5e73\u9762\u7dda\u5f62 (alignment.elements)\n    line(\u9577\u3055)\n    kanwa(\u534a\u5f84, \u89d2\u5ea6, \u7de9\u548c\u9577)         \u7de9\u548c\u66f2\u7dda\u4ed8\u304d\u30ab\u30fc\u30d6\n    kanwaNokanto(\u534a\u5f84, \u89d2\u5ea6, \u7de9\u548c\u9577)  \u30ab\u30f3\u30c8\u306a\u3057\u7248\n    nokanwa(\u534a\u5f84, \u89d2\u5ea6)               \u7de9\u548c\u306a\u3057\u66f2\u7dda\n\n  \u25a0 \u624b\u52d5\u30c6\u30fc\u30d6\u30eb\u3082\u4f7f\u7528\u53ef\u80fd\n    {type="line",      length=100}\n    {type="arc",       radius=300, angle=math.rad(20), length=300*math.rad(20)}\n    {type="clothoid",  length=50, startRadius=math.huge, endRadius=300}\n\n  \u25a0 \u7e26\u65ad\u7dda\u5f62 (profile.elements)\n    grade(\u52fe\u914d_permil, \u9577\u3055)\n    vcurve(\u958b\u59cb\u52fe\u914d, \u7d42\u4e86\u52fe\u914d, \u9577\u3055)\n  ====================================================================\n--]]\n\nlocal railsA = {\n\n  alignment = {\n    elements = flatten({\n      line(200),\n      kanwa(300, math.rad(30), 50),\n      kanwa(-300, math.rad(30), 50),\n      line(100),\n      nokanwa(150, math.rad(30)),\n      line(100),\n    })\n  },\n\n  profile = {\n    elements = flatten({\n      grade(  0,  100),\n      vcurve( 0, 10,  80),\n      grade( 10, 100),\n      vcurve(10,  0,  80),\n      grade(  0, 100),\n      vcurve( 0, -8,  60),\n      grade( -8, 100),\n      vcurve(-8,  0,  60),\n      grade(  0, 100),\n    })\n  },\n\n}\n\nreturn railsA';
+var DEF2='local railsB = {\n\n  alignment = {\n    elements = flatten({\n      line(100),\n      kanwa(250, math.rad(20), 40),\n      line(150),\n    })\n  },\n\n}\n\nreturn railsB';
+
+window.resetData=function(){tracks[activeIdx].src=DEF;document.getElementById('ta').value=DEF;firstFitDone=false;log('リセット');parseActive();};
+
+// =============================================
+// 線形の前後反転
+// =============================================
+window.reverseTrack=function(){
+  var tr=tracks[activeIdx];
+  var aeRaw=extractBlock(tr.src,'alignment');
+  if(!aeRaw){logWarn('平面線形ブロックが見つかりません');return;}
+  var ae=parseBlock(tr.name+'(反転)',aeRaw);
+  if(!ae||ae.err||!Array.isArray(ae)){logErr('反転: 解析失敗');return;}
+  var rev=ae.slice().reverse().map(function(el){
+    var ne=Object.assign({},el);
+    if(ne.type==='arc'||ne.type==='Narc'){ne.radius=-ne.radius;}
+    else if(ne.type==='clothoid'||ne.type==='Nclothoid'){
+      var tmp=ne.startRadius;ne.startRadius=-ne.endRadius;ne.endRadius=-tmp;
+    }
+    return ne;
+  });
+  function luaN(v){if(!isFinite(v)||Math.abs(v)>1e14)return'math.huge';return parseFloat(v.toFixed(6)).toString();}
+  function elToLua(el){
+    var t=el.type;
+    if(t==='line')return'      line('+luaN(el.length)+')';
+    if(t==='arc')return'      {type="arc", radius='+luaN(el.radius)+', angle=math.rad('+luaN(el.angle*180/Math.PI)+'), length='+luaN(el.length)+'}';
+    if(t==='Narc')return'      nokanwa('+luaN(el.radius)+', math.rad('+luaN(el.angle*180/Math.PI)+'))';
+    if(t==='clothoid'||t==='Nclothoid')return'      {type="clothoid", length='+luaN(el.length)+', startRadius='+luaN(el.startRadius)+', endRadius='+luaN(el.endRadius)+'}';
+    return'      -- unknown: '+t;
+  }
+  var newEls=rev.map(elToLua).join(',\n');
+  var profRaw=extractBlock(tr.src,'profile');
+  var varMatch=tr.src.match(/local\s+(\w+)\s*=/);var vn=varMatch?varMatch[1]:'rails';
+  var newSrc='local '+vn+' = {\n\n  alignment = {\n    elements = flatten({\n'+newEls+'\n    })\n  },\n\n';
+  if(profRaw)newSrc+='  profile = {\n    elements = flatten({\n'+profRaw+'\n    })\n  },\n\n';
+  newSrc+='}\n\nreturn '+vn;
+  // 始点を元終点に移動
+  if(tr.geo){
+    var we=l2w(tr.geo.endX,tr.geo.endY,tr);
+    var srcTh=(90-(tr.offsetBear||90))*Math.PI/180,worldEndH=srcTh+tr.geo.endH;
+    var newBear=((90-(worldEndH+Math.PI)*180/Math.PI)%360+360)%360;
+    tr.offsetX=we.wx;tr.offsetY=we.wy;tr.offsetBear=newBear;
+  }
+  tr.src=newSrc;document.getElementById('ta').value=newSrc;
+  loadOCUI(activeIdx);parseActive();
+  logOk('線形を前後反転しました');
+};
+
+// =============================================
+// 並列線形（オフセット）― 幾何学的に正確な半径補正版
+// 右オフセット = +d, 左オフセット = -d
+//
+// 各要素の変換ルール:
+//   line      : length 変わらず、始点を法線方向にずらすだけ
+//   arc/Narc  : R_new = R - d  (右カーブR>0 で外側d>0なら大きくなる)
+//               ※符号付き半径を使う: 右カーブ=正, 左カーブ=負
+//               ⇒ R_new = R_signed - d  →  length_new = |R_new| * angle
+//   clothoid  : startRadius, endRadius を同様に補正
+//               length はオフセット後の平均曲率半径の比率で補正
+// =============================================
+window.openParallel=function(){document.getElementById('parallelpo').classList.toggle('on');};
+
+function offsetElements(elements, d){
+  // d > 0 = 右オフセット (進行方向右手), d < 0 = 左
+  //
+  // ─── geoAlign の符号規則 ─────────────────────────────────────────
+  //   geoAlign: h -= k*ds  (k=1/R)
+  //     R > 0 → k > 0 → h 減少 → 時計回り → 右旋回
+  //     R < 0 → k < 0 → h 増加 → 反時計回り → 左旋回
+  //
+  // ─── 平行移動と半径の関係 ────────────────────────────────────────
+  //   右旋回(R>0), d>0(右=内側, 曲線中心に近づく): |R_new| = R - d  → R_new = R - d ✓
+  //   右旋回(R>0), d<0(左=外側, 曲線中心から遠ざかる): R_new = R - d > R ✓
+  //   左旋回(R<0), d>0(右=外側, 中心から遠ざかる): R_new = R - d (より負 → |R_new|増) ✓
+  //   左旋回(R<0), d<0(左=内側, 中心に近づく): R_new = R - d (より正方向 → |R_new|減) ✓
+  // 結論: R_new = R - d  (全ケースで正しい)
+  //
+  // ※ 注意: Lua の offsetSamples は yAxis:Cross(forward) で右方向を計算するため
+  //         d>0 は物理的な右(Roblox -Z 方向)にシフトする。HTML のここと方向が一致。
+
+  var out=[];
+  for(var i=0;i<elements.length;i++){
+    var el=elements[i],ne=Object.assign({},el);
+    var t=el.type;
+    if(t==='line'){
+      // 直線: 長さ変わらず
+      out.push(ne);
+    } else if(t==='arc'||t==='Narc'){
+      // geoAlign: R>0=右旋回, R<0=左旋回 (h -= k*ds, k=1/R)
+      // d>0(右) は曲線中心方向: 右旋回(R>0)では内側, 左旋回(R<0)では外側
+      // 全ケースで R_new = R - d が正しい (関数先頭の符号規則参照)
+      var R=el.radius;
+      var R_new=R-d;
+      if(Math.abs(R_new)<0.001){
+        ne.radius=R_new;ne.length=0;ne.angle=0;
+      } else {
+        var angle=el.angle!=null?el.angle:(Math.abs(el.length)/Math.abs(R));
+        ne.radius=R_new;
+        ne.length=Math.abs(R_new)*angle;
+        ne.angle=angle;
+      }
+      out.push(ne);
+    } else if(t==='clothoid'||t==='Nclothoid'){
+      // 同様に R_new = R - d で補正
+      var sR=el.startRadius,eR=el.endRadius;
+      var sR_new=isFinite(sR)?sR-d:Infinity;
+      var eR_new=isFinite(eR)?eR-d:Infinity;
+      // 緩和曲線長: クロソイドパラメータ A=sqrt(|R|*L) を保持すると
+      // L_new = A²/|R_new| だが始終端両方変わる場合は比率補正
+      var avgR_orig=(isFinite(sR)&&isFinite(eR))?(Math.abs(sR)+Math.abs(eR))/2:
+                    isFinite(sR)?Math.abs(sR):isFinite(eR)?Math.abs(eR):null;
+      var avgR_new=(isFinite(sR_new)&&isFinite(eR_new))?(Math.abs(sR_new)+Math.abs(eR_new))/2:
+                    isFinite(sR_new)?Math.abs(sR_new):isFinite(eR_new)?Math.abs(eR_new):null;
+      var lenNew=el.length;
+      if(avgR_orig&&avgR_new&&avgR_orig>0){
+        lenNew=el.length*(avgR_new/avgR_orig);
+      }
+      ne.startRadius=sR_new;ne.endRadius=eR_new;ne.length=Math.max(0,lenNew);
+      out.push(ne);
+    } else {
+      out.push(ne);
+    }
+  }
+  return out;
+}
+
+function elementsToLua(elements, varName){
+  function luaN(v){
+    if(v===Infinity||v>1e13)return'math.huge';
+    if(v===-Infinity||v<-1e13)return'-math.huge';
+    return parseFloat(v.toFixed(6)).toString();
+  }
+  function elToLua(el){
+    var t=el.type;
+    if(t==='line')return'      line('+luaN(el.length)+')';
+    if(t==='arc')return'      {type="arc", radius='+luaN(el.radius)+', angle='+luaN(el.angle)+', length='+luaN(el.length)+'}';
+    if(t==='Narc')return'      {type="Narc", radius='+luaN(el.radius)+', angle='+luaN(el.angle)+', length='+luaN(el.length)+'}';
+    if(t==='clothoid')return'      {type="clothoid", length='+luaN(el.length)+', startRadius='+luaN(el.startRadius)+', endRadius='+luaN(el.endRadius)+'}';
+    if(t==='Nclothoid')return'      {type="Nclothoid", length='+luaN(el.length)+', startRadius='+luaN(el.startRadius)+', endRadius='+luaN(el.endRadius)+'}';
+    return'      -- unknown: '+t;
+  }
+  var vn=varName||'railsParallel';
+  return'local '+vn+' = {\n\n  alignment = {\n    elements = flatten({\n'+
+    elements.map(elToLua).join(',\n')+'\n    })\n  },\n\n}\n\nreturn '+vn;
+}
+
+window.execParallel=function(){
+  var off=parseFloat(document.getElementById('paroff').value)||5;
+  var dir=document.querySelector('input[name=pardir]:checked').value;
+  var suf=document.getElementById('parsuf').value||'-並列';
+  var tr=tracks[activeIdx];
+  var aeRaw=extractBlock(tr.src,'alignment');
+  if(!aeRaw){logErr('平面線形ブロックが見つかりません');return;}
+  var ae=parseBlock(tr.name+'(並列)',aeRaw);
+  if(!ae||ae.err||!Array.isArray(ae)){logErr('並列: 解析失敗');return;}
+
+  var sides=dir==='both'?[-off,off]:dir==='left'?[off]:[-off];
+  sides.forEach(function(d){
+    var label=dir==='both'?(d>0?'-左':'-右'):'';
+    var newEls=offsetElements(ae,d);
+    var vn=(tr.name+suf+label).replace(/[^a-zA-Z0-9_]/g,'_').replace(/^(\d)/,'_$1');
+    var newSrc=elementsToLua(newEls,vn);
+
+    // 始点を法線方向(右)にずらす
+    // geoAlign の heading=0 は東向き, Roblox right = -Z = editor south = (x:0, y:-1)
+    // right vector in editor = (sin(th), -cos(th))
+    var th=(90-(tr.offsetBear||90))*Math.PI/180;
+    var rX=Math.sin(th)*d, rY=-Math.cos(th)*d;
+
+    var nt=makeTrack(tr.name+suf+label,newSrc,tr.offsetBear);
+    nt.offsetX=(tr.offsetX||0)+rX;
+    nt.offsetY=(tr.offsetY||0)+rY;
+    nt.enabled=true;
+    tracks.push(nt);parseTrack(nt);
+    logOk('並列線形 d='+d.toFixed(3)+'m: '+newEls.length+'要素');
+  });
+  renderTabs();scheduleRender();renderProfile();
+  openParallel();
+};
+
+// =============================================
+// 接続提案モーダル
+// =============================================
+var _csLastCode=null,_csConnFrom=null;
+window.openConnSuggest=function(){
+  var po=document.getElementById('connsuggpo');
+  if(!po.classList.contains('on'))populateCSSelects();
+  po.classList.toggle('on');
+};
+function populateCSSelects(){
+  var h0='<option value="">— 選択 —</option>';var h='';
+  for(var i=0;i<tracks.length;i++){
+    if(!tracks[i].enabled)continue;
+    var n=esc(tracks[i].name);
+    if(tracks[i].geo&&tracks[i].geo.segs&&tracks[i].geo.segs.length)h+='<option value="'+i+'-end">'+n+' 終端</option>';
+    h+='<option value="'+i+'-start">'+n+' 始端</option>';
+  }
+  document.getElementById('csFrom').innerHTML=h0+h;
+  document.getElementById('csTo').innerHTML=h0+h;
+  document.getElementById('csResult').textContent='始点側と終点側の端点を選択して「計算」してください。';
+  document.getElementById('csApplyBtn').disabled=true;
+  _csLastCode=null;
+}
+function getEP(val){
+  if(!val)return null;
+  var pts=val.split('-'),i=parseInt(pts[0]),pt=pts[1];
+  var tr=tracks[i];if(!tr)return null;
+  if(pt==='end'){
+    if(!tr.geo)return null;
+    var we=l2w(tr.geo.endX,tr.geo.endY,tr);
+    var worldH=(90-(tr.offsetBear||90))*Math.PI/180+tr.geo.endH;
+    return{x:we.wx,y:we.wy,h:worldH};
+  }else{
+    var ws=l2w(0,0,tr);
+    return{x:ws.wx,y:ws.wy,h:(90-(tr.offsetBear||90))*Math.PI/180};
+  }
+}
+window.updateConnPreview=function(){
+  var fv=document.getElementById('csFrom').value,tv=document.getElementById('csTo').value;
+  if(!fv||!tv){document.getElementById('csResult').textContent='両方の端点を選択してください。';return;}
+  if(fv===tv){document.getElementById('csResult').textContent='異なる端点を選択してください。';return;}
+  var ep0=getEP(fv),ep1=getEP(tv);
+  if(!ep0||!ep1){document.getElementById('csResult').textContent='端点データを取得できません。';return;}
+  var minR=Math.max(10,parseFloat(document.getElementById('csMinR').value)||150);
+  var kanwaL=Math.max(0,parseFloat(document.getElementById('csKanwa').value)||50);
+  var res=suggestConn(ep0,ep1,minR,kanwaL);
+  document.getElementById('csResult').textContent=res.desc;
+  document.getElementById('csApplyBtn').disabled=!res.code;
+  _csLastCode=res.code||null;_csConnFrom=fv;
+};
+window.applyConnSuggest=function(){
+  if(!_csLastCode)return;
+  var fv=_csConnFrom,pts=fv?fv.split('-'):[],i=parseInt(pts[0]),pt=pts[1];
+  var nt=makeTrack('接続線形',_csLastCode);
+  var srcTr=tracks[i];
+  if(srcTr&&pt==='end'&&srcTr.geo){
+    var we=l2w(srcTr.geo.endX,srcTr.geo.endY,srcTr);
+    var wH=(90-(srcTr.offsetBear||90))*Math.PI/180+srcTr.geo.endH;
+    nt.offsetX=we.wx;nt.offsetY=we.wy;nt.offsetBear=((90-wH*180/Math.PI)%360+360)%360;
+  }else if(srcTr){
+    var ws=l2w(0,0,srcTr);nt.offsetX=ws.wx;nt.offsetY=ws.wy;nt.offsetBear=srcTr.offsetBear||90;
+  }
+  tracks.push(nt);activeIdx=tracks.length-1;
+  renderTabs();document.getElementById('ta').value=nt.src;loadOCUI(activeIdx);parseActive();
+  openConnSuggest();logOk('接続線形を追加しました');
+};
+function suggestConn(ep0,ep1,minR,kanwaL){
+  var dx=ep1.x-ep0.x,dy=ep1.y-ep0.y,dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist<0.01)return{desc:'端点が同じ位置です。'};
+  var cosH=Math.cos(ep0.h),sinH=Math.sin(ep0.h);
+  var lx=dx*cosH+dy*sinH,ly=-dx*sinH+dy*cosH;
+  var dh=ep1.h-ep0.h;
+  while(dh>Math.PI)dh-=2*Math.PI;while(dh<-Math.PI)dh+=2*Math.PI;
+  var L=function(v){return parseFloat(v.toFixed(3)).toString();};
+  var lines=['【端点情報】','  距離: '+dist.toFixed(2)+'m','  横ずれ: '+ly.toFixed(2)+'m  前方: '+lx.toFixed(2)+'m','  方向差: '+(dh*180/Math.PI).toFixed(2)+'°',''];
+  var code=null;
+  // 案1: 直線 (方向差・横ずれ小)
+  if(Math.abs(dh)<0.01&&Math.abs(ly)<0.5&&lx>0){
+    lines.push('【案1: 直線】');lines.push('  line('+dist.toFixed(2)+')');
+    code='local railsConn = {\n\n  alignment = {\n    elements = flatten({\n      line('+dist.toFixed(2)+')\n    })\n  },\n\n}\n\nreturn railsConn';
+  }
+  // 案2: 円弧接続
+  var absDh=Math.abs(dh),absLy=Math.abs(ly);
+  if(absDh>0.01&&absDh<Math.PI){
+    var R=Math.max(minR,absLy/Math.max(0.0001,1-Math.cos(absDh)));
+    var sign=dh<0?1:-1; // 右カーブ=+R, 左=-R
+    var arcAng=absDh;
+    var chord=2*R*Math.sin(arcAng/2);
+    var midDir=ep0.h-sign*arcAng/2;
+    var preLx=lx-chord*Math.cos(midDir-ep0.h);
+    var preL=Math.max(0,preLx);
+    var els=[];
+    if(preL>0.5)els.push('      line('+L(preL)+')');
+    if(kanwaL>0&&arcAng-kanwaL/R*2>0.001){
+      els.push('      kanwa('+(sign>0?'':'-')+L(R)+', math.rad('+L(arcAng*180/Math.PI)+'), '+L(kanwaL)+')');
+    }else{
+      els.push('      nokanwa('+(sign>0?'':'-')+L(R)+', math.rad('+L(arcAng*180/Math.PI)+'))');
+    }
+    var desc='R='+R.toFixed(0)+'m  角='+L(arcAng*180/Math.PI)+'°  前直線='+L(preL)+'m';
+    lines.push('【案2: '+(kanwaL>0?'緩和曲線付き':'単純')+'円弧接続】');
+    els.forEach(function(e){lines.push('  '+e.trim());});lines.push('  ※ '+desc);
+    if(!code)code='local railsConn = {\n\n  alignment = {\n    elements = flatten({\n'+els.join(',\n')+'\n    })\n  },\n\n}\n\nreturn railsConn';
+  }
+  // 案3: S字 (方向差ほぼ0、横ずれあり)
+  if(absDh<0.01&&absLy>0.1&&lx>0.5){
+    var Rs=Math.max(minR,lx*lx/(4*absLy)*Math.PI);
+    var angS=Math.asin(Math.min(1,absLy*2/lx));
+    if(!isFinite(angS))angS=Math.PI/6;
+    var sgnS=ly>0?1:-1;
+    var els2=[];
+    if(kanwaL>0&&angS-kanwaL/Rs*2>0.001){
+      els2.push('      kanwa('+(sgnS<0?'-':'')+L(Rs)+', math.rad('+L(angS*180/Math.PI)+'), '+L(kanwaL)+')');
+      els2.push('      kanwa('+(sgnS>0?'-':'')+L(Rs)+', math.rad('+L(angS*180/Math.PI)+'), '+L(kanwaL)+')');
+    }else{
+      els2.push('      nokanwa('+(sgnS<0?'-':'')+L(Rs)+', math.rad('+L(angS*180/Math.PI)+'))');
+      els2.push('      nokanwa('+(sgnS>0?'-':'')+L(Rs)+', math.rad('+L(angS*180/Math.PI)+'))');
+    }
+    lines.push('【案3: S字曲線 R='+Rs.toFixed(0)+'m】');
+    els2.forEach(function(e){lines.push('  '+e.trim());});
+    if(!code)code='local railsConn = {\n\n  alignment = {\n    elements = flatten({\n'+els2.join(',\n')+'\n    })\n  },\n\n}\n\nreturn railsConn';
+  }
+  if(!code)lines.push('\n※ 自動提案困難です。半径・緩和長・端点を調整してください。');
+  return{desc:lines.join('\n'),code:code};
+}
+
+// =============================================
+// 縦断線形: 接続チェーン表示
+// =============================================
+function buildProfileChain(){
+  var enabled=[];
+  for(var i=0;i<tracks.length;i++){if(tracks[i].enabled&&tracks[i].geo&&tracks[i].profSegs&&tracks[i].profSegs.length)enabled.push({idx:i,tr:tracks[i]});}
+  if(!enabled.length)return[];
+  var N=enabled.length;
+  // 接続マップ: from -> to (終端≒始端, 距離 < 10m)
+  var nextOf={};
+  for(var i=0;i<N;i++){
+    var ti=enabled[i].tr;if(!ti.geo)continue;
+    var wei=l2w(ti.geo.endX,ti.geo.endY,ti);
+    for(var j=0;j<N;j++){
+      if(i===j)continue;
+      var tj=enabled[j].tr;
+      var wsj=l2w(0,0,tj);
+      var d=Math.sqrt(Math.pow(wei.wx-wsj.wx,2)+Math.pow(wei.wy-wsj.wy,2));
+      if(d<10)nextOf[i]=j;
+    }
+  }
+  var hasPrev=new Set(Object.values(nextOf));
+  var chains=[];var inChain=new Set();
+  for(var i=0;i<N;i++){
+    if(hasPrev.has(i))continue;
+    var chain=[i];var cur=i;
+    while(nextOf[cur]!==undefined&&!inChain.has(nextOf[cur])){cur=nextOf[cur];chain.push(cur);inChain.add(cur);}
+    inChain.add(i);chains.push(chain);
+  }
+  for(var i=0;i<N;i++)if(!inChain.has(i))chains.push([i]);
+  return chains.map(function(chain){
+    var offset=0,segs=[],names=[];
+    chain.forEach(function(ni){
+      var tr=enabled[ni].tr;names.push(tr.name);
+      tr.profSegs.forEach(function(seg){
+        segs.push({el:seg.el,pts:seg.pts.map(function(p){return{d:p.d+offset,e:p.e};})});
+      });
+      if(tr.profSegs.length){var last=tr.profSegs[tr.profSegs.length-1].pts;if(last&&last.length)offset+=last[last.length-1].d;}
+    });
+    return{segs:segs,name:names.join('→'),trackIdx:enabled[chain[0]].idx,chained:chain.length>1};
+  });
+}
+
+(function init(){
+  try{
+    if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)document.body.classList.add('dark');
+    tracks=[makeTrack('\u7dda\u5f621',DEF,90)];activeIdx=0;renderTabs();document.getElementById('ta').value=DEF;loadOCUI(0);
+    logInfo('\u7dda\u5f62\u30a8\u30c7\u30a3\u30bf\u30fc \u8d77\u52d5');
+    logInfo('UA: '+navigator.userAgent.slice(0,88));
+    logInfo('\u753b\u9762: '+screen.width+'\u00d7'+screen.height+'  win: '+innerWidth+'\u00d7'+innerHeight);
+    logInfo('DPR: '+(window.devicePixelRatio||1));
+    logInfo('機能: 反転 / 並列線形 / 接続提案 / 縦断チェーン表示 / セグメント濃淡 / 長さ表記 / 縦断圧縮スライダー / 接続先DD / 名前編集 / 入出力');
+    setTimeout(function(){try{parseActive();}catch(e){logErr('\u521d\u56de\u89e3\u6790: '+e.message);}},80);
+  }catch(e){
+    var b=document.getElementById('logbox');
+    if(b)b.innerHTML='<div class="ll er"><span class="lt">INIT</span><span class="lm">\u2717 \u521d\u671f\u5316\u30a8\u30e9\u30fc: '+esc(e.message)+'</span></div>';
+  }
+})();
+})();
+</script>
+</body>
+</html>
